@@ -3,11 +3,11 @@ import { Link } from 'react-router-dom'
 import type { Player, Position } from '../types/player'
 import { useDraft } from '../hooks/useDraft'
 import { usePlayers } from '../context/PlayersContext'
-import { useViewer } from '../context/ViewerContext'
+import { useAuth } from '../hooks/useAuth'
 import { useWeeklyProjections } from '../hooks/useWeeklyProjections'
 import { canDraftPosition } from '../context/rosterRules'
 import { POSITION_COLORS } from '../utils/positionColors'
-import { displayNameForTurn } from '../utils/playerNames'
+import { turnForPlayerName } from '../utils/playerNames'
 
 type PositionFilter = Position | 'ALL'
 const POSITIONS: PositionFilter[] = ['ALL', 'QB', 'RB', 'WR', 'TE', 'K', 'DEF']
@@ -24,7 +24,9 @@ export function WaiverPage() {
   } = useDraft()
   const { projections } = useWeeklyProjections(week)
 
-  const { viewer: actingAs, setViewer: setActingAs } = useViewer()
+  // No "acting as" toggle anymore - you can only add/drop for the player you're logged in as.
+  const { user } = useAuth()
+  const actingAs = turnForPlayerName(user!)
   const [search, setSearch] = useState('')
   const [positionFilter, setPositionFilter] = useState<PositionFilter>('ALL')
   const [pendingAdd, setPendingAdd] = useState<Player | null>(null)
@@ -65,7 +67,7 @@ export function WaiverPage() {
     if (canDraftPosition(currentRoster, player.position)) {
       const result = await addWaiverPlayer(player.id, actingAs)
       if (result.ok) {
-        setToast(`Added ${player.name} to ${displayNameForTurn(actingAs)}'s roster.`)
+        setToast(`Added ${player.name} to your roster.`)
       } else {
         setActionError(result.reason ?? 'Could not add player.')
       }
@@ -79,7 +81,7 @@ export function WaiverPage() {
     if (!pendingAdd) return
     const result = await addWaiverPlayer(pendingAdd.id, actingAs, dropPlayer.id)
     if (result.ok) {
-      setToast(`Added ${pendingAdd.name}, dropped ${dropPlayer.name} (${displayNameForTurn(actingAs)}).`)
+      setToast(`Added ${pendingAdd.name}, dropped ${dropPlayer.name}.`)
       setPendingAdd(null)
       setActionError(null)
     } else {
@@ -90,24 +92,9 @@ export function WaiverPage() {
   return (
     <div className="mx-auto max-w-5xl space-y-4 p-4">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-center gap-2">
-          <span className="text-sm text-gray-400">Adding as:</span>
-          {([1, 2] as const).map((turn) => (
-            <button
-              key={turn}
-              onClick={() => {
-                setActingAs(turn)
-                setPendingAdd(null)
-                setActionError(null)
-              }}
-              className={`rounded-md px-3 py-1.5 text-sm font-medium ${
-                actingAs === turn ? 'bg-sky-600 text-white' : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
-              }`}
-            >
-              {displayNameForTurn(turn)}
-            </button>
-          ))}
-        </div>
+        <span className="text-sm text-gray-400">
+          Adding to <span className="font-semibold text-gray-200">{user}</span>'s roster
+        </span>
         <Link
           to="/roster"
           className="rounded-md border border-gray-700 px-3 py-1.5 text-sm font-medium text-gray-300 hover:bg-gray-800"

@@ -1,12 +1,13 @@
 import { useEffect, useRef } from 'react'
 import type { Player } from '../types/player'
 import { useDraft } from '../hooks/useDraft'
+import { useAuth } from '../hooks/useAuth'
 import { useWeeklyScores } from '../hooks/useWeeklyScores'
 import { useSeasonRecord } from '../hooks/useSeasonRecord'
 import { usePlayers } from '../context/PlayersContext'
 import { canDraftPosition } from '../context/rosterRules'
 import { saveDraftHistory, type PlayerHistoryLine } from '../utils/firebase'
-import { PLAYER_DISPLAY_NAMES } from '../utils/playerNames'
+import { PLAYER_DISPLAY_NAMES, turnForPlayerName } from '../utils/playerNames'
 import { TurnIndicator } from './TurnIndicator'
 import { RosterPreview } from './RosterPreview'
 import { PlayerPool } from './PlayerPool'
@@ -39,7 +40,13 @@ export function DraftBoard() {
 
   const seasonRecord = useSeasonRecord()
 
-  const handleDraft = (playerId: string) => selectPlayer(playerId, currentTurn)
+  const { user } = useAuth()
+  const myTurn = turnForPlayerName(user!)
+  const isMyTurn = currentTurn === myTurn
+
+  // Always claim your own identity, never "whoever's turn it currently looks like" - the
+  // out-of-turn check in the reducer then does the actual enforcement server-side.
+  const handleDraft = (playerId: string) => selectPlayer(playerId, myTurn)
   const currentRoster = currentTurn === 1 ? playerOneRoster : playerTwoRoster
 
   if (connectionError) {
@@ -86,6 +93,12 @@ export function DraftBoard() {
         <>
           <TurnIndicator currentTurn={currentTurn} />
 
+          {!isMyTurn && (
+            <p className="rounded-lg border border-gray-700 bg-gray-900 px-4 py-2 text-center text-sm text-gray-400">
+              Waiting for {PLAYER_DISPLAY_NAMES[currentTurn === 1 ? 'player1' : 'player2']} to pick.
+            </p>
+          )}
+
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <RosterPreview label={PLAYER_DISPLAY_NAMES.player1} roster={playerOneRoster} isActive={currentTurn === 1} />
             <RosterPreview label={PLAYER_DISPLAY_NAMES.player2} roster={playerTwoRoster} isActive={currentTurn === 2} />
@@ -94,7 +107,7 @@ export function DraftBoard() {
           <PlayerPool
             players={availablePlayers}
             onDraft={handleDraft}
-            canDraft={(position) => canDraftPosition(currentRoster, position)}
+            canDraft={(position) => isMyTurn && canDraftPosition(currentRoster, position)}
           />
         </>
       )}

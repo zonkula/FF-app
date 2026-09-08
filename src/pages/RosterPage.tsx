@@ -2,11 +2,11 @@ import { useMemo, useState } from 'react'
 import type { Player } from '../types/player'
 import { useDraft } from '../hooks/useDraft'
 import { usePlayers } from '../context/PlayersContext'
-import { useViewer } from '../context/ViewerContext'
+import { useAuth } from '../hooks/useAuth'
 import { useWeeklyProjections } from '../hooks/useWeeklyProjections'
 import { organizeRosterByPosition, type OrganizedRoster } from '../context/rosterRules'
 import { POSITION_COLORS } from '../utils/positionColors'
-import { displayNameForTurn } from '../utils/playerNames'
+import { displayNameForTurn, turnForPlayerName } from '../utils/playerNames'
 import type { Turn } from '../context/DraftContext'
 import type { WeeklyPoints } from '../services/sleeperApi'
 
@@ -26,7 +26,8 @@ export function RosterPage() {
   const { week } = usePlayers()
   const { playerOneRoster, playerTwoRoster, availablePlayers, isConnected, connectionError, addWaiverPlayer } =
     useDraft()
-  const { viewer, setViewer } = useViewer()
+  const { user } = useAuth()
+  const viewer = turnForPlayerName(user!)
   const { projections } = useWeeklyProjections(week)
 
   const [viewingOpponent, setViewingOpponent] = useState(false)
@@ -66,24 +67,9 @@ export function RosterPage() {
   return (
     <div className="mx-auto max-w-3xl space-y-4 p-4">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-center gap-2">
-          <span className="text-sm text-gray-400">Viewing as:</span>
-          {([1, 2] as const).map((turn) => (
-            <button
-              key={turn}
-              onClick={() => {
-                setViewer(turn)
-                setSwapOutPlayer(null)
-                setActionError(null)
-              }}
-              className={`rounded-md px-3 py-1.5 text-sm font-medium ${
-                viewer === turn ? 'bg-sky-600 text-white' : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
-              }`}
-            >
-              {displayNameForTurn(turn)}
-            </button>
-          ))}
-        </div>
+        <span className="text-sm text-gray-400">
+          Logged in as <span className="font-semibold text-gray-200">{user}</span>
+        </span>
         <button
           onClick={() => {
             setViewingOpponent((v) => !v)
