@@ -356,6 +356,24 @@ export async function clearAllHistory(): Promise<void> {
   await set(ref(getFirebaseDatabase(), `${ROOT}/history`), null)
 }
 
+/**
+ * Wipes every draft, roster, waiver log, and history entry across all weeks and starts over at
+ * week 1 with an empty draft - for undoing test/development data before a season has actually
+ * started. Irreversible - the caller should confirm first.
+ */
+export async function resetEntireSeason(): Promise<void> {
+  const db = getFirebaseDatabase()
+  await Promise.all([
+    set(ref(db, `${ROOT}/drafts`), null),
+    set(ref(db, `${ROOT}/rosters`), null),
+    set(ref(db, `${ROOT}/waiverActivity`), null),
+    set(ref(db, `${ROOT}/history`), null),
+  ])
+  await set(ref(db, `${ROOT}/activeWeek`), 1)
+  await set(ref(db, `${ROOT}/nextResetDate`), getNextWeeklyResetDate().getTime())
+  await set(ref(db, draftPath(1)), createLiveDraft())
+}
+
 export interface LeagueMeta {
   activeWeek: number | null
   nextResetDate: number | null

@@ -6,6 +6,7 @@ import {
   loadLeagueMeta,
   loadLeagueSnapshot,
   resetCurrentWeekDraft,
+  resetEntireSeason,
   type LeagueMeta,
 } from '../utils/firebase'
 
@@ -71,6 +72,7 @@ function AdminDashboard() {
   const [status, setStatus] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
   const [confirmingClearHistory, setConfirmingClearHistory] = useState(false)
+  const [confirmingResetSeason, setConfirmingResetSeason] = useState(false)
 
   const refresh = useCallback(async () => {
     const [nextMeta, nextSnapshot] = await Promise.all([loadLeagueMeta(), loadLeagueSnapshot()])
@@ -114,6 +116,15 @@ function AdminDashboard() {
     }
     setConfirmingClearHistory(false)
     runAction('Clearing all history', clearAllHistory)
+  }
+
+  const handleResetSeason = () => {
+    if (!confirmingResetSeason) {
+      setConfirmingResetSeason(true)
+      return
+    }
+    setConfirmingResetSeason(false)
+    runAction('Resetting entire season', resetEntireSeason)
   }
 
   return (
@@ -181,6 +192,35 @@ function AdminDashboard() {
             className="min-h-[48px] rounded-md bg-red-600 px-4 text-sm font-medium text-white hover:bg-red-500 disabled:cursor-not-allowed disabled:opacity-50"
           >
             Clear All History
+          </button>
+        )}
+        {confirmingResetSeason ? (
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-sm text-red-300">
+              Wipe every draft, roster, and history entry and start over at Week 1? This can't be undone.
+            </span>
+            <button
+              onClick={handleResetSeason}
+              disabled={busy}
+              className="min-h-[48px] rounded-md bg-red-700 px-4 text-sm font-medium text-white hover:bg-red-600"
+            >
+              Yes, reset the season
+            </button>
+            <button
+              onClick={() => setConfirmingResetSeason(false)}
+              disabled={busy}
+              className="min-h-[48px] rounded-md border border-gray-700 px-4 text-sm font-medium text-gray-300 hover:bg-gray-800"
+            >
+              Cancel
+            </button>
+          </div>
+        ) : (
+          <button
+            onClick={handleResetSeason}
+            disabled={busy}
+            className="min-h-[48px] rounded-md bg-red-700 px-4 text-sm font-medium text-white hover:bg-red-600 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            Reset Entire Season
           </button>
         )}
       </div>
