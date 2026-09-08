@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import type { Player } from '../types/player'
 import { fetchWeeklyScores, type WeeklyPoints } from '../services/sleeperApi'
 import { usePlayers } from '../context/PlayersContext'
@@ -26,6 +26,10 @@ export interface UseWeeklyScoresResult {
   /** Sum of `roster`'s PPR points for that week (0 for anyone not yet in `scores`). */
   totalPoints: number
   loading: boolean
+  /** When `scores` was last successfully fetched, or null before the first load completes. */
+  lastUpdated: number | null
+  /** Re-fetches from Sleeper, bypassing nothing cached long-term (there isn't any) - just kicks off a fresh request. */
+  refresh: () => void
 }
 
 /** Sleeper's actual (not projected) PPR scoring for a week, optionally summed for one roster. */
@@ -33,6 +37,8 @@ export function useWeeklyScores(week: number | null, roster: Player[] = []): Use
   const { season } = usePlayers()
   const [scores, setScores] = useState<WeeklyPoints>({})
   const [loading, setLoading] = useState(true)
+  const [lastUpdated, setLastUpdated] = useState<number | null>(null)
+  const [refreshCount, setRefreshCount] = useState(0)
 
   useEffect(() => {
     if (season == null || week == null) return
@@ -41,7 +47,10 @@ export function useWeeklyScores(week: number | null, roster: Player[] = []): Use
 
     fetchWeeklyScoresDeduped(season, week)
       .then((points) => {
-        if (!cancelled) setScores(points)
+        if (!cancelled) {
+          setScores(points)
+          setLastUpdated(Date.now())
+        }
       })
       .catch(() => {
         if (!cancelled) setScores({})
@@ -53,9 +62,12 @@ export function useWeeklyScores(week: number | null, roster: Player[] = []): Use
     return () => {
       cancelled = true
     }
-  }, [season, week])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [season, week, refreshCount])
+
+  const refresh = useCallback(() => setRefreshCount((n) => n + 1), [])
 
   const totalPoints = roster.reduce((sum, player) => sum + (scores[player.id] ?? 0), 0)
 
-  return { scores, totalPoints, loading }
+  return { scores, totalPoints, loading, lastUpdated, refresh }
 }

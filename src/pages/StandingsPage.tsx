@@ -24,29 +24,31 @@ export function StandingsPage() {
   }
 
   return (
-    <div className="mx-auto max-w-4xl space-y-6 p-4">
-      <div className="rounded-lg border border-gray-700 bg-gray-900 p-4">
+    <div className="mx-auto max-w-4xl space-y-6 p-3 sm:p-4">
+      <div className="rounded-lg border border-gray-700 bg-gray-900 p-3 sm:p-4">
         <h2 className="mb-3 font-semibold text-gray-100">Season Record</h2>
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b border-gray-800 text-left text-xs text-gray-500">
-              <th className="py-1.5 font-medium">Player</th>
-              <th className="py-1.5 text-right font-medium">Wins</th>
-              <th className="py-1.5 text-right font-medium">Losses</th>
-              <th className="py-1.5 text-right font-medium">Ties</th>
-            </tr>
-          </thead>
-          <tbody>
-            {(['player1', 'player2'] as const).map((slot) => (
-              <tr key={slot} className="border-b border-gray-800/50 last:border-0">
-                <td className="py-1.5 text-gray-200">{PLAYER_DISPLAY_NAMES[slot]}</td>
-                <td className="py-1.5 text-right text-gray-300">{seasonRecord[slot].wins}</td>
-                <td className="py-1.5 text-right text-gray-300">{seasonRecord[slot].losses}</td>
-                <td className="py-1.5 text-right text-gray-300">{seasonRecord[slot].ties}</td>
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[20rem] text-sm">
+            <thead>
+              <tr className="border-b border-gray-800 text-left text-xs text-gray-500">
+                <th className="py-1.5 font-medium">Player</th>
+                <th className="py-1.5 text-right font-medium">Wins</th>
+                <th className="py-1.5 text-right font-medium">Losses</th>
+                <th className="py-1.5 text-right font-medium">Ties</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {(['player1', 'player2'] as const).map((slot) => (
+                <tr key={slot} className="border-b border-gray-800/50 last:border-0">
+                  <td className="py-1.5 text-gray-200">{PLAYER_DISPLAY_NAMES[slot]}</td>
+                  <td className="py-1.5 text-right text-gray-300">{seasonRecord[slot].wins}</td>
+                  <td className="py-1.5 text-right text-gray-300">{seasonRecord[slot].losses}</td>
+                  <td className="py-1.5 text-right text-gray-300">{seasonRecord[slot].ties}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -54,13 +56,13 @@ export function StandingsPage() {
         <StatCard title="Lowest score this season" entry={worst} />
       </div>
 
-      <div className="rounded-lg border border-gray-700 bg-gray-900 p-4">
-        <div className="mb-3 flex items-center justify-between">
+      <div className="rounded-lg border border-gray-700 bg-gray-900 p-3 sm:p-4">
+        <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <h2 className="font-semibold text-gray-100">Weekly Results</h2>
           <div className="flex gap-1.5">
             <button
               onClick={() => setSortOrder('newest')}
-              className={`rounded-full px-3 py-1 text-xs font-medium ${
+              className={`min-h-[44px] rounded-full px-4 text-xs font-medium ${
                 sortOrder === 'newest' ? 'bg-sky-600 text-white' : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
               }`}
             >
@@ -68,7 +70,7 @@ export function StandingsPage() {
             </button>
             <button
               onClick={() => setSortOrder('oldest')}
-              className={`rounded-full px-3 py-1 text-xs font-medium ${
+              className={`min-h-[44px] rounded-full px-4 text-xs font-medium ${
                 sortOrder === 'oldest' ? 'bg-sky-600 text-white' : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
               }`}
             >
@@ -80,28 +82,30 @@ export function StandingsPage() {
         {sortedHistory.length === 0 ? (
           <p className="py-6 text-center text-sm text-gray-500">No completed weeks yet.</p>
         ) : (
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-gray-800 text-left text-xs text-gray-500">
-                <th className="py-1.5 font-medium">Week</th>
-                <th className="py-1.5 text-right font-medium">{PLAYER_DISPLAY_NAMES.player1}</th>
-                <th className="py-1.5 text-right font-medium">{PLAYER_DISPLAY_NAMES.player2}</th>
-                <th className="py-1.5 text-right font-medium">Winner</th>
-              </tr>
-            </thead>
-            <tbody>
-              {sortedHistory.map((entry) => (
-                <tr key={entry.week} className="border-b border-gray-800/50 last:border-0">
-                  <td className="py-1.5 text-gray-200">Week {entry.week}</td>
-                  <td className="py-1.5 text-right text-gray-300">{entry.player1Score.toFixed(1)}</td>
-                  <td className="py-1.5 text-right text-gray-300">{entry.player2Score.toFixed(1)}</td>
-                  <td className="py-1.5 text-right text-gray-300">
-                    {entry.winner === 'tie' ? 'Tie' : PLAYER_DISPLAY_NAMES[entry.winner]}
-                  </td>
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[24rem] text-sm">
+              <thead>
+                <tr className="border-b border-gray-800 text-left text-xs text-gray-500">
+                  <th className="py-1.5 font-medium">Week</th>
+                  <th className="py-1.5 text-right font-medium">{PLAYER_DISPLAY_NAMES.player1}</th>
+                  <th className="py-1.5 text-right font-medium">{PLAYER_DISPLAY_NAMES.player2}</th>
+                  <th className="py-1.5 text-right font-medium">Winner</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {sortedHistory.map((entry) => (
+                  <tr key={entry.week} className="border-b border-gray-800/50 last:border-0">
+                    <td className="py-1.5 text-gray-200">Week {entry.week}</td>
+                    <td className="py-1.5 text-right text-gray-300">{entry.player1Score.toFixed(1)}</td>
+                    <td className="py-1.5 text-right text-gray-300">{entry.player2Score.toFixed(1)}</td>
+                    <td className="py-1.5 text-right text-gray-300">
+                      {entry.winner === 'tie' ? 'Tie' : PLAYER_DISPLAY_NAMES[entry.winner]}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
       </div>
     </div>

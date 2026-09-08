@@ -39,12 +39,12 @@ function AdminLoginForm() {
           onChange={(e) => setPassword(e.target.value)}
           placeholder="Password"
           autoFocus
-          className="w-full rounded-md border border-gray-700 bg-gray-800 px-3 py-2 text-sm text-gray-100 placeholder-gray-500 focus:border-sky-500 focus:outline-none"
+          className="min-h-[48px] w-full rounded-md border border-gray-700 bg-gray-800 px-3 text-sm text-gray-100 placeholder-gray-500 focus:border-sky-500 focus:outline-none"
         />
         {error && <p className="text-sm text-red-400">{error}</p>}
         <button
           type="submit"
-          className="w-full rounded-md bg-sky-600 px-3 py-2 text-sm font-medium text-white hover:bg-sky-500"
+          className="min-h-[48px] w-full rounded-md bg-sky-600 px-3 text-sm font-medium text-white hover:bg-sky-500"
         >
           Log in
         </button>
@@ -117,12 +117,12 @@ function AdminDashboard() {
   }
 
   return (
-    <div className="mx-auto max-w-3xl space-y-6 p-4">
+    <div className="mx-auto max-w-3xl space-y-6 p-3 sm:p-4">
       <div className="flex items-center justify-between">
         <h2 className="text-lg font-semibold text-gray-100">Admin</h2>
         <button
           onClick={logout}
-          className="rounded-md border border-gray-700 px-3 py-1.5 text-xs font-medium text-gray-300 hover:bg-gray-800"
+          className="min-h-[44px] rounded-md border border-gray-700 px-3 text-xs font-medium text-gray-300 hover:bg-gray-800"
         >
           Log out
         </button>
@@ -145,31 +145,31 @@ function AdminDashboard() {
         <button
           onClick={handleInitializeNewDraft}
           disabled={busy}
-          className="rounded-md bg-sky-600 px-3 py-2 text-sm font-medium text-white hover:bg-sky-500 disabled:cursor-not-allowed disabled:opacity-50"
+          className="min-h-[48px] rounded-md bg-sky-600 px-4 text-sm font-medium text-white hover:bg-sky-500 disabled:cursor-not-allowed disabled:opacity-50"
         >
           Initialize New Draft
         </button>
         <button
           onClick={handleResetWeek}
           disabled={busy || meta.activeWeek == null}
-          className="rounded-md bg-amber-600 px-3 py-2 text-sm font-medium text-white hover:bg-amber-500 disabled:cursor-not-allowed disabled:opacity-50"
+          className="min-h-[48px] rounded-md bg-amber-600 px-4 text-sm font-medium text-white hover:bg-amber-500 disabled:cursor-not-allowed disabled:opacity-50"
         >
           Reset This Week's Draft
         </button>
         {confirmingClearHistory ? (
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <span className="text-sm text-red-300">Delete all history? This can't be undone.</span>
             <button
               onClick={handleClearHistory}
               disabled={busy}
-              className="rounded-md bg-red-600 px-3 py-2 text-sm font-medium text-white hover:bg-red-500"
+              className="min-h-[48px] rounded-md bg-red-600 px-4 text-sm font-medium text-white hover:bg-red-500"
             >
               Yes, clear it
             </button>
             <button
               onClick={() => setConfirmingClearHistory(false)}
               disabled={busy}
-              className="rounded-md border border-gray-700 px-3 py-2 text-sm font-medium text-gray-300 hover:bg-gray-800"
+              className="min-h-[48px] rounded-md border border-gray-700 px-4 text-sm font-medium text-gray-300 hover:bg-gray-800"
             >
               Cancel
             </button>
@@ -178,7 +178,7 @@ function AdminDashboard() {
           <button
             onClick={handleClearHistory}
             disabled={busy}
-            className="rounded-md bg-red-600 px-3 py-2 text-sm font-medium text-white hover:bg-red-500 disabled:cursor-not-allowed disabled:opacity-50"
+            className="min-h-[48px] rounded-md bg-red-600 px-4 text-sm font-medium text-white hover:bg-red-500 disabled:cursor-not-allowed disabled:opacity-50"
           >
             Clear All History
           </button>
@@ -190,7 +190,7 @@ function AdminDashboard() {
           <h3 className="text-sm font-semibold text-gray-100">Firebase data (read-only)</h3>
           <button
             onClick={() => refresh()}
-            className="rounded-md border border-gray-700 px-2 py-1 text-xs text-gray-300 hover:bg-gray-800"
+            className="min-h-[44px] rounded-md border border-gray-700 px-3 text-xs text-gray-300 hover:bg-gray-800"
           >
             Refresh
           </button>

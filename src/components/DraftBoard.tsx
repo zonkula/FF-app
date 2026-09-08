@@ -62,7 +62,7 @@ export function DraftBoard() {
   }
 
   return (
-    <div className="mx-auto max-w-5xl space-y-4 p-4">
+    <div className="mx-auto max-w-5xl space-y-4 p-3 sm:p-4">
       <div className="flex flex-col gap-1 text-xs text-gray-400 sm:flex-row sm:justify-between">
         <span>Week {weekNumber}</span>
         <span>
@@ -77,7 +77,11 @@ export function DraftBoard() {
       {error && (
         <div className="flex items-center justify-between rounded-lg border border-red-500 bg-red-950/40 px-4 py-2 text-sm text-red-300">
           <span>{error}</span>
-          <button onClick={clearError} className="ml-3 text-red-400 hover:text-red-200" aria-label="Dismiss error">
+          <button
+            onClick={clearError}
+            aria-label="Dismiss error"
+            className="ml-3 flex h-11 w-11 shrink-0 items-center justify-center text-red-400 hover:text-red-200"
+          >
             ✕
           </button>
         </div>

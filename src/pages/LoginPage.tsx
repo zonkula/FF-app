@@ -37,13 +37,13 @@ export function LoginPage() {
           onChange={(e) => setPassword(e.target.value)}
           placeholder="Password"
           autoFocus
-          className="w-full rounded-md border border-gray-700 bg-gray-800 px-3 py-2 text-sm text-gray-100 placeholder-gray-500 focus:border-sky-500 focus:outline-none"
+          className="min-h-[48px] w-full rounded-md border border-gray-700 bg-gray-800 px-3 text-sm text-gray-100 placeholder-gray-500 focus:border-sky-500 focus:outline-none"
         />
         {error && <p className="text-sm text-red-400">{error}</p>}
         <button
           type="submit"
           disabled={submitting}
-          className="w-full rounded-md bg-sky-600 px-3 py-2 text-sm font-medium text-white hover:bg-sky-500 disabled:cursor-not-allowed disabled:opacity-50"
+          className="min-h-[48px] w-full rounded-md bg-sky-600 px-3 text-sm font-medium text-white hover:bg-sky-500 disabled:cursor-not-allowed disabled:opacity-50"
         >
           {submitting ? 'Logging in...' : 'Log in'}
         </button>

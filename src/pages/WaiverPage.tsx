@@ -90,14 +90,14 @@ export function WaiverPage() {
   }
 
   return (
-    <div className="mx-auto max-w-5xl space-y-4 p-4">
+    <div className="mx-auto max-w-5xl space-y-4 p-3 sm:p-4">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <span className="text-sm text-gray-400">
           Adding to <span className="font-semibold text-gray-200">{user}</span>'s roster
         </span>
         <Link
           to="/roster"
-          className="rounded-md border border-gray-700 px-3 py-1.5 text-sm font-medium text-gray-300 hover:bg-gray-800"
+          className="flex min-h-[48px] items-center justify-center rounded-md border border-gray-700 px-3 text-sm font-medium text-gray-300 hover:bg-gray-800"
         >
           View My Roster
         </Link>
@@ -112,7 +112,10 @@ export function WaiverPage() {
       {actionError && !pendingAdd && (
         <div className="flex items-center justify-between rounded-lg border border-red-500 bg-red-950/40 px-4 py-2 text-sm text-red-300">
           <span>{actionError}</span>
-          <button onClick={() => setActionError(null)} className="ml-3 text-red-400 hover:text-red-200">
+          <button
+            onClick={() => setActionError(null)}
+            className="ml-3 flex h-11 w-11 shrink-0 items-center justify-center text-red-400 hover:text-red-200"
+          >
             ✕
           </button>
         </div>
@@ -138,7 +141,7 @@ export function WaiverPage() {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search players..."
-            className="rounded-md border border-gray-700 bg-gray-800 px-3 py-1.5 text-sm text-gray-100 placeholder-gray-500 focus:border-sky-500 focus:outline-none"
+            className="min-h-[48px] rounded-md border border-gray-700 bg-gray-800 px-3 text-sm text-gray-100 placeholder-gray-500 focus:border-sky-500 focus:outline-none"
           />
           <span className="text-xs text-gray-500">Sorted by projected points (Week {week ?? '—'})</span>
         </div>
@@ -148,7 +151,7 @@ export function WaiverPage() {
             <button
               key={position}
               onClick={() => setPositionFilter(position)}
-              className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
+              className={`min-h-[40px] rounded-full px-3 text-xs font-medium transition-colors ${
                 positionFilter === position
                   ? 'bg-sky-600 text-white'
                   : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
@@ -159,11 +162,11 @@ export function WaiverPage() {
           ))}
         </div>
 
-        <div className="max-h-[32rem] overflow-y-auto">
+        <div className="max-h-[32rem] overflow-y-auto overflow-x-auto">
           {visiblePlayers.length === 0 ? (
             <p className="py-6 text-center text-sm text-gray-500">No players match.</p>
           ) : (
-            <table className="w-full text-sm">
+            <table className="w-full min-w-[26rem] text-sm">
               <thead>
                 <tr className="border-b border-gray-800 text-left text-xs text-gray-500">
                   <th className="py-2 font-medium">Player</th>
@@ -187,7 +190,7 @@ export function WaiverPage() {
                     <td className="py-2 text-right">
                       <button
                         onClick={() => handleAdd(player)}
-                        className="rounded-md bg-sky-600 px-2.5 py-1 text-xs font-medium text-white hover:bg-sky-500"
+                        className="min-h-[44px] rounded-md bg-sky-600 px-3 text-xs font-medium text-white hover:bg-sky-500"
                       >
                         Add Player
                       </button>
@@ -214,12 +217,15 @@ interface DropPickerProps {
 function DropPicker({ addPlayer, roster, error, onCancel, onConfirm }: DropPickerProps) {
   return (
     <div className="rounded-lg border border-amber-600 bg-amber-950/30 p-4">
-      <div className="mb-3 flex items-center justify-between">
+      <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <p className="text-sm text-amber-300">
           No open slot for <span className="font-semibold">{addPlayer.name}</span> ({addPlayer.position}). Drop
           someone to make room:
         </p>
-        <button onClick={onCancel} className="text-xs text-gray-400 hover:text-gray-200">
+        <button
+          onClick={onCancel}
+          className="min-h-[44px] self-start rounded-md px-3 text-xs text-gray-400 hover:bg-amber-900/40 hover:text-gray-200 sm:self-auto"
+        >
           Cancel
         </button>
       </div>
@@ -233,7 +239,7 @@ function DropPicker({ addPlayer, roster, error, onCancel, onConfirm }: DropPicke
             addPlayer.position,
           )
           return (
-            <li key={player.id} className="flex items-center justify-between text-sm">
+            <li key={player.id} className="flex items-center justify-between gap-2 text-sm">
               <span className={wouldWork ? 'text-gray-200' : 'text-gray-500'}>
                 {player.name} <span className="text-xs text-gray-500">({player.position})</span>
               </span>
@@ -241,7 +247,7 @@ function DropPicker({ addPlayer, roster, error, onCancel, onConfirm }: DropPicke
                 onClick={() => onConfirm(player)}
                 disabled={!wouldWork}
                 title={wouldWork ? undefined : `Dropping ${player.name} wouldn't free a slot for ${addPlayer.position}`}
-                className={`rounded-md px-2.5 py-1 text-xs font-medium text-white ${
+                className={`min-h-[44px] shrink-0 rounded-md px-3 text-xs font-medium text-white ${
                   wouldWork ? 'bg-amber-600 hover:bg-amber-500' : 'cursor-not-allowed bg-gray-700'
                 }`}
               >

@@ -65,7 +65,7 @@ export function RosterPage() {
   }
 
   return (
-    <div className="mx-auto max-w-3xl space-y-4 p-4">
+    <div className="mx-auto max-w-3xl space-y-4 p-3 sm:p-4">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <span className="text-sm text-gray-400">
           Logged in as <span className="font-semibold text-gray-200">{user}</span>
@@ -76,14 +76,14 @@ export function RosterPage() {
             setSwapOutPlayer(null)
             setActionError(null)
           }}
-          className="rounded-md border border-gray-700 px-3 py-1.5 text-sm font-medium text-gray-300 hover:bg-gray-800"
+          className="min-h-[48px] rounded-md border border-gray-700 px-3 text-sm font-medium text-gray-300 hover:bg-gray-800"
         >
           {viewingOpponent ? 'View My Roster' : 'View Opponent Roster'}
         </button>
       </div>
 
-      <div className="rounded-lg border border-gray-700 bg-gray-900 p-4">
-        <div className="mb-3 flex items-center justify-between">
+      <div className="rounded-lg border border-gray-700 bg-gray-900 p-3 sm:p-4">
+        <div className="mb-3 flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
           <h2 className="font-semibold text-gray-100">{displayNameForTurn(shownTurn)}'s Roster</h2>
           <span className="text-sm text-gray-400">
             Total projected: <span className="font-semibold text-gray-100">{totalProjected.toFixed(1)}</span> pts
@@ -93,7 +93,10 @@ export function RosterPage() {
         {actionError && !swapOutPlayer && (
           <div className="mb-3 flex items-center justify-between rounded-lg border border-red-500 bg-red-950/40 px-3 py-2 text-sm text-red-300">
             <span>{actionError}</span>
-            <button onClick={() => setActionError(null)} className="ml-3 text-red-400 hover:text-red-200">
+            <button
+              onClick={() => setActionError(null)}
+              className="ml-3 flex h-11 w-11 shrink-0 items-center justify-center text-red-400 hover:text-red-200"
+            >
               ✕
             </button>
           </div>
@@ -112,7 +115,7 @@ export function RosterPage() {
                     {entries.map((player) => (
                       <div
                         key={player.id}
-                        className="flex items-center justify-between rounded px-2 py-1 hover:bg-gray-800/50"
+                        className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 rounded px-2 py-1.5 hover:bg-gray-800/50"
                       >
                         <span className="text-gray-200">
                           {player.name}{' '}
@@ -123,7 +126,7 @@ export function RosterPage() {
                             {player.nflTeam} · Bye {player.byeWeek}
                           </span>
                         </span>
-                        <div className="flex items-center gap-3">
+                        <div className="flex shrink-0 items-center gap-3">
                           <span className="text-xs text-gray-500">
                             {(projections[player.id] ?? 0).toFixed(1)} pts
                           </span>
@@ -133,7 +136,7 @@ export function RosterPage() {
                                 setSwapOutPlayer(player)
                                 setActionError(null)
                               }}
-                              className="rounded-md border border-sky-700 px-2 py-0.5 text-xs font-medium text-sky-400 hover:bg-sky-950"
+                              className="min-h-[40px] rounded-md border border-sky-700 px-3 text-xs font-medium text-sky-400 hover:bg-sky-950"
                             >
                               Swap
                             </button>
@@ -185,11 +188,14 @@ function FlexSwapPicker({ outgoing, candidates, projections, error, onCancel, on
 
   return (
     <div className="rounded-lg border border-sky-700 bg-sky-950/30 p-4">
-      <div className="mb-3 flex items-center justify-between">
+      <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <p className="text-sm text-sky-300">
           Swap FLEX: <span className="font-semibold">{outgoing.name}</span> out. Pick a replacement (RB/WR/TE):
         </p>
-        <button onClick={onCancel} className="text-xs text-gray-400 hover:text-gray-200">
+        <button
+          onClick={onCancel}
+          className="min-h-[44px] self-start rounded-md px-3 text-xs text-gray-400 hover:bg-sky-900/40 hover:text-gray-200 sm:self-auto"
+        >
           Cancel
         </button>
       </div>
@@ -201,7 +207,7 @@ function FlexSwapPicker({ outgoing, candidates, projections, error, onCancel, on
         value={search}
         onChange={(e) => setSearch(e.target.value)}
         placeholder="Search players..."
-        className="mb-3 w-full rounded-md border border-gray-700 bg-gray-800 px-3 py-1.5 text-sm text-gray-100 placeholder-gray-500 focus:border-sky-500 focus:outline-none"
+        className="mb-3 min-h-[48px] w-full rounded-md border border-gray-700 bg-gray-800 px-3 text-sm text-gray-100 placeholder-gray-500 focus:border-sky-500 focus:outline-none"
       />
 
       <ul className="max-h-72 space-y-1 overflow-y-auto">
@@ -209,7 +215,7 @@ function FlexSwapPicker({ outgoing, candidates, projections, error, onCancel, on
           <li className="py-4 text-center text-sm text-gray-500">No players match.</li>
         ) : (
           sorted.map((player) => (
-            <li key={player.id} className="flex items-center justify-between text-sm">
+            <li key={player.id} className="flex items-center justify-between gap-2 text-sm">
               <span className="text-gray-200">
                 {player.name}{' '}
                 <span className={`rounded px-1.5 py-0.5 text-xs ${POSITION_COLORS[player.position]}`}>
@@ -219,7 +225,7 @@ function FlexSwapPicker({ outgoing, candidates, projections, error, onCancel, on
               </span>
               <button
                 onClick={() => onConfirm(player)}
-                className="rounded-md bg-sky-600 px-2.5 py-1 text-xs font-medium text-white hover:bg-sky-500"
+                className="min-h-[44px] shrink-0 rounded-md bg-sky-600 px-3 text-xs font-medium text-white hover:bg-sky-500"
               >
                 Swap In
               </button>

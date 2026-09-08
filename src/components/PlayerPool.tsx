@@ -32,21 +32,21 @@ export function PlayerPool({ players, onDraft, canDraft }: PlayerPoolProps) {
   }, [players, search, positionFilter, sortKey])
 
   return (
-    <div className="rounded-lg border border-gray-700 bg-gray-900 p-4">
+    <div className="rounded-lg border border-gray-700 bg-gray-900 p-3 sm:p-4">
       <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <input
           type="text"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder="Search players..."
-          className="rounded-md border border-gray-700 bg-gray-800 px-3 py-1.5 text-sm text-gray-100 placeholder-gray-500 focus:border-sky-500 focus:outline-none"
+          className="min-h-[48px] rounded-md border border-gray-700 bg-gray-800 px-3 text-sm text-gray-100 placeholder-gray-500 focus:border-sky-500 focus:outline-none"
         />
 
         <div className="flex flex-wrap items-center gap-2">
           <select
             value={sortKey}
             onChange={(e) => setSortKey(e.target.value as SortKey)}
-            className="rounded-md border border-gray-700 bg-gray-800 px-2 py-1.5 text-sm text-gray-100 focus:border-sky-500 focus:outline-none"
+            className="min-h-[48px] rounded-md border border-gray-700 bg-gray-800 px-2 text-sm text-gray-100 focus:border-sky-500 focus:outline-none"
           >
             <option value="adp">Sort: ADP</option>
             <option value="pprPoints">Sort: PPR points</option>
@@ -59,7 +59,7 @@ export function PlayerPool({ players, onDraft, canDraft }: PlayerPoolProps) {
           <button
             key={position}
             onClick={() => setPositionFilter(position)}
-            className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
+            className={`min-h-[40px] rounded-full px-3 text-xs font-medium transition-colors ${
               positionFilter === position
                 ? 'bg-sky-600 text-white'
                 : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
@@ -70,11 +70,11 @@ export function PlayerPool({ players, onDraft, canDraft }: PlayerPoolProps) {
         ))}
       </div>
 
-      <div className="max-h-96 overflow-y-auto">
+      <div className="max-h-96 overflow-y-auto overflow-x-auto">
         {visiblePlayers.length === 0 ? (
           <p className="py-6 text-center text-sm text-gray-500">No players match.</p>
         ) : (
-          <table className="w-full text-sm">
+          <table className="w-full min-w-[34rem] text-sm">
             <thead>
               <tr className="border-b border-gray-800 text-left text-xs text-gray-500">
                 <th className="py-2 font-medium">Player</th>
@@ -108,7 +108,7 @@ export function PlayerPool({ players, onDraft, canDraft }: PlayerPoolProps) {
                         onClick={() => onDraft(player.id)}
                         disabled={!draftable}
                         title={draftable ? undefined : 'No open roster slot for this position'}
-                        className={`rounded-md px-2.5 py-1 text-xs font-medium text-white ${
+                        className={`min-h-[44px] rounded-md px-3 text-xs font-medium text-white ${
                           draftable ? 'bg-sky-600 hover:bg-sky-500' : 'cursor-not-allowed bg-gray-700'
                         }`}
                       >
