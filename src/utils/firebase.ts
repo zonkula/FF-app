@@ -259,6 +259,58 @@ export async function getCurrentWeek(): Promise<number> {
   return updateActiveWeek()
 }
 
+// ---- Admin operations -------------------------------------------------------
+
+/**
+ * Force-advances to a brand new week immediately, regardless of whether the Tuesday-midnight
+ * boundary has actually passed. Unlike updateActiveWeek's natural rollover, this is an explicit
+ * override — for correcting a mistake or starting the league ahead of schedule.
+ */
+export async function initializeNewDraftWeek(): Promise<number> {
+  const db = getFirebaseDatabase()
+  const weekResult = await runTransaction(ref(db, `${ROOT}/activeWeek`), (current: number | null) => (current ?? 0) + 1)
+  const newWeek = weekResult.snapshot.val() as number
+  await runTransaction(ref(db, `${ROOT}/nextResetDate`), () => getNextWeeklyResetDate().getTime())
+  await set(ref(db, draftPath(newWeek)), createLiveDraft())
+  return newWeek
+}
+
+/** Clears this week's picks and both rosters and resets the turn to player1, without touching the week number. */
+export async function resetCurrentWeekDraft(week: number): Promise<void> {
+  const db = getFirebaseDatabase()
+  await set(ref(db, draftPath(week)), createLiveDraft())
+  await set(ref(db, rosterPath(week, 'player1')), null)
+  await set(ref(db, rosterPath(week, 'player2')), null)
+}
+
+/** Permanently deletes every completed week's record. Irreversible - the caller should confirm first. */
+export async function clearAllHistory(): Promise<void> {
+  await set(ref(getFirebaseDatabase(), `${ROOT}/history`), null)
+}
+
+export interface LeagueMeta {
+  activeWeek: number | null
+  nextResetDate: number | null
+}
+
+export async function loadLeagueMeta(): Promise<LeagueMeta> {
+  const db = getFirebaseDatabase()
+  const [weekSnap, resetSnap] = await Promise.all([
+    get(ref(db, `${ROOT}/activeWeek`)),
+    get(ref(db, `${ROOT}/nextResetDate`)),
+  ])
+  return {
+    activeWeek: weekSnap.exists() ? (weekSnap.val() as number) : null,
+    nextResetDate: resetSnap.exists() ? (resetSnap.val() as number) : null,
+  }
+}
+
+/** The entire `ff-league` tree, for a read-only admin debug view. */
+export async function loadLeagueSnapshot(): Promise<unknown> {
+  const snapshot = await get(ref(getFirebaseDatabase(), ROOT))
+  return snapshot.val()
+}
+
 // ---- Sleeper player cache (players/{season}) -------------------------------
 
 export interface PlayersCache {
