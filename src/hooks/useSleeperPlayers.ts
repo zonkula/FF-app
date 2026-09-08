@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import type { Player } from '../types/player'
 import { fetchAllPlayers, fetchNflState } from '../services/sleeperApi'
-import { loadCachedPlayers, saveCachedPlayers } from '../utils/firebase'
+import { cachePlayersInFirebase, getCachedPlayers } from '../utils/firebase'
 
 const CACHE_TTL_MS = 24 * 60 * 60 * 1000 // 24 hours - players/teams rarely change more often than that
 
@@ -38,7 +38,7 @@ export function useSleeperPlayers(): UseSleeperPlayersResult {
         // The Firebase cache is a pure optimization: if it's unreachable (misconfigured,
         // offline, etc.) fall straight through to fetching fresh from Sleeper rather than
         // failing the whole players-load for what is really a caching problem.
-        const cached = await loadCachedPlayers(state.season).catch(() => null)
+        const cached = await getCachedPlayers(state.season).catch(() => null)
         if (cached && Date.now() - cached.fetchedAt < CACHE_TTL_MS) {
           if (!cancelled) {
             setPlayers(cached.players)
@@ -52,7 +52,7 @@ export function useSleeperPlayers(): UseSleeperPlayersResult {
         setPlayers(fresh)
         setLoading(false)
         // Best-effort: share this fetch with other clients. A failure here shouldn't block the app.
-        saveCachedPlayers(state.season, fresh).catch(() => {})
+        cachePlayersInFirebase(state.season, fresh).catch(() => {})
       } catch (err) {
         if (!cancelled) {
           setError(err instanceof Error ? err.message : 'Failed to load players from Sleeper.')

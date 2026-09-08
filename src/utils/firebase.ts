@@ -22,7 +22,7 @@ import type { Player, Position } from '../types/player'
  *                              — the permanent season record, kept forever.
  *     activeWeek               which week-{n} is currently live for drafting.
  *     nextResetDate            epoch ms for the next Tuesday-midnight rollover to a new week.
- *   playersCache/{season}      cached Sleeper player pool (infra, not league data - kept outside
+ *   players/{season}           cached Sleeper player pool (infra, not league data - kept outside
  *                              ff-league).
  */
 
@@ -259,21 +259,23 @@ export async function getCurrentWeek(): Promise<number> {
   return updateActiveWeek()
 }
 
-// ---- Sleeper player cache ---------------------------------------------------
+// ---- Sleeper player cache (players/{season}) -------------------------------
 
 export interface PlayersCache {
   players: Player[]
   fetchedAt: number
 }
 
-export async function loadCachedPlayers(season: string): Promise<PlayersCache | null> {
-  const snapshot = await get(ref(getFirebaseDatabase(), `playersCache/${season}`))
+/** Reads the cached player pool for a season, so clients don't hammer the Sleeper API. */
+export async function getCachedPlayers(season: string): Promise<PlayersCache | null> {
+  const snapshot = await get(ref(getFirebaseDatabase(), `players/${season}`))
   return snapshot.exists() ? (snapshot.val() as PlayersCache) : null
 }
 
-export async function saveCachedPlayers(season: string, players: Player[]): Promise<void> {
+/** Shares a freshly-fetched player pool with every other client for the rest of the cache TTL. */
+export async function cachePlayersInFirebase(season: string, players: Player[]): Promise<void> {
   await set(
-    ref(getFirebaseDatabase(), `playersCache/${season}`),
+    ref(getFirebaseDatabase(), `players/${season}`),
     { players, fetchedAt: Date.now() } satisfies PlayersCache,
   )
 }

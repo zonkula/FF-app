@@ -3,16 +3,12 @@ import type { Player } from '../types/player'
 import { useDraft } from '../hooks/useDraft'
 import { useWeeklyScores } from '../hooks/useWeeklyScores'
 import { useSeasonRecord } from '../hooks/useSeasonRecord'
+import { usePlayers } from '../context/PlayersContext'
 import { canDraftPosition } from '../context/rosterRules'
 import { saveDraftHistory, type PlayerHistoryLine } from '../utils/firebase'
 import { TurnIndicator } from './TurnIndicator'
 import { RosterPreview } from './RosterPreview'
 import { PlayerPool } from './PlayerPool'
-
-export interface DraftBoardProps {
-  season: string | null
-  week: number | null
-}
 
 function formatResetTime(date: Date): string {
   return date.toLocaleString(undefined, {
@@ -24,7 +20,7 @@ function formatResetTime(date: Date): string {
   })
 }
 
-export function DraftBoard({ season, week }: DraftBoardProps) {
+export function DraftBoard() {
   const {
     availablePlayers,
     playerOneRoster,
@@ -83,8 +79,6 @@ export function DraftBoard({ season, week }: DraftBoardProps) {
       {isDraftComplete ? (
         <DraftCompleteSummary
           weekNumber={weekNumber}
-          season={season}
-          week={week}
           playerOneRoster={playerOneRoster}
           playerTwoRoster={playerTwoRoster}
           onHistorySaved={() => setHistoryVersion((v) => v + 1)}
@@ -111,8 +105,6 @@ export function DraftBoard({ season, week }: DraftBoardProps) {
 
 interface DraftCompleteSummaryProps {
   weekNumber: number
-  season: string | null
-  week: number | null
   playerOneRoster: Player[]
   playerTwoRoster: Player[]
   onHistorySaved: () => void
@@ -127,19 +119,13 @@ function toHistoryLines(roster: Player[], scores: Record<string, number>): Playe
   }))
 }
 
-function DraftCompleteSummary({
-  weekNumber,
-  season,
-  week,
-  playerOneRoster,
-  playerTwoRoster,
-  onHistorySaved,
-}: DraftCompleteSummaryProps) {
-  const { scores, loading: scoresLoading } = useWeeklyScores(season, week)
+function DraftCompleteSummary({ weekNumber, playerOneRoster, playerTwoRoster, onHistorySaved }: DraftCompleteSummaryProps) {
+  const { week } = usePlayers()
+  // Both calls share one Sleeper request (see useWeeklyScores' dedup cache) since they're for
+  // the same NFL week - only the roster used to sum totalPoints differs.
+  const { scores, totalPoints: p1Total, loading: scoresLoading } = useWeeklyScores(week, playerOneRoster)
+  const { totalPoints: p2Total } = useWeeklyScores(week, playerTwoRoster)
   const gamesReported = Object.keys(scores).length > 0
-
-  const p1Total = playerOneRoster.reduce((sum, p) => sum + (scores[p.id] ?? 0), 0)
-  const p2Total = playerTwoRoster.reduce((sum, p) => sum + (scores[p.id] ?? 0), 0)
 
   const historySavedForWeek = useRef<number | null>(null)
   useEffect(() => {

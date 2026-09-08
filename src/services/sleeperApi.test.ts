@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { fetchAllPlayers, fetchNflState, fetchWeeklyPoints } from './sleeperApi'
+import { fetchAllPlayers, fetchNflState, fetchWeeklyScores } from './sleeperApi'
 
 function jsonResponse(body: unknown) {
   return { ok: true, status: 200, json: async () => body } as Response
@@ -85,7 +85,7 @@ describe('fetchNflState', () => {
   })
 })
 
-describe('fetchWeeklyPoints', () => {
+describe('fetchWeeklyScores', () => {
   it('extracts pts_ppr per player and skips entries without it', async () => {
     vi.stubGlobal(
       'fetch',
@@ -98,7 +98,7 @@ describe('fetchWeeklyPoints', () => {
         ),
       ),
     )
-    const points = await fetchWeeklyPoints('2026', 1)
+    const points = await fetchWeeklyScores('2026', 1)
     expect(points).toEqual({ '4984': 38.76 })
   })
 })

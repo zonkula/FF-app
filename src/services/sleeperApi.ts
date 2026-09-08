@@ -109,7 +109,7 @@ export async function fetchAllPlayers(season: string): Promise<Player[]> {
 export type WeeklyPoints = Record<string, number>
 
 /** Actual (not projected) PPR scoring for every player who played in a given season/week. */
-export async function fetchWeeklyPoints(season: string, week: number): Promise<WeeklyPoints> {
+export async function fetchWeeklyScores(season: string, week: number): Promise<WeeklyPoints> {
   const res = await fetch(`${SLEEPER_BASE}/v1/stats/nfl/regular/${season}/${week}`)
   if (!res.ok) throw new Error(`Sleeper stats request failed: ${res.status}`)
   const raw: Record<string, { pts_ppr?: number }> = await res.json()
