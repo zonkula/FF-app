@@ -4,9 +4,11 @@ import { ensureAnonymousAuth } from '../config/firebase'
 import {
   ensureDraftInitialized,
   getCurrentWeek,
+  logWaiverActivity,
   saveRoster,
   subscribeToDraft,
   submitDraftPick,
+  submitWaiverMove,
 } from '../utils/firebase'
 import { isDraftComplete as computeIsDraftComplete, resolveRoster, type LiveDraft, type PlayerSlot } from './draftLogic'
 import { organizeRosterByPosition } from './rosterRules'
@@ -40,6 +42,12 @@ export interface DraftContextValue {
   nextResetAt: Date
   selectPlayer: (playerId: string, asPlayer?: Turn) => void
   clearError: () => void
+  /**
+   * Adds a player from the waiver pool, anytime (no turn restriction). `dropPlayerId` is required
+   * whenever the roster has no open slot for the new player's position, which after a completed
+   * draft is effectively always. Resolves once Firebase has confirmed (or rejected) the move.
+   */
+  addWaiverPlayer: (playerId: string, asPlayer: Turn, dropPlayerId?: string) => Promise<{ ok: boolean; reason?: string }>
 }
 
 export const DraftContext = createContext<DraftContextValue | undefined>(undefined)
@@ -130,6 +138,31 @@ export function DraftProvider({ children, players }: DraftProviderProps) {
 
   const clearError = useCallback(() => setError(null), [])
 
+  const addWaiverPlayer = useCallback(
+    async (addPlayerId: string, asPlayer: Turn, dropPlayerId?: string) => {
+      if (week == null) return { ok: false, reason: 'Not connected yet.' }
+      const slot = turnToSlot(asPlayer)
+      const result = await submitWaiverMove(week, slot, addPlayerId, dropPlayerId, playersById)
+      if (!result.ok) return { ok: false, reason: result.reason }
+
+      const addedPlayer = playersById.get(addPlayerId)
+      const droppedPlayer = dropPlayerId != null ? playersById.get(dropPlayerId) : undefined
+      logWaiverActivity(week, {
+        action: dropPlayerId != null ? 'swap' : 'add',
+        by: slot,
+        addedPlayerId: addPlayerId,
+        addedPlayerName: addedPlayer?.name ?? addPlayerId,
+        at: Date.now(),
+        ...(dropPlayerId != null
+          ? { droppedPlayerId: dropPlayerId, droppedPlayerName: droppedPlayer?.name ?? dropPlayerId }
+          : {}),
+      }).catch(() => {})
+
+      return { ok: true }
+    },
+    [week, playersById],
+  )
+
   const value = useMemo<DraftContextValue>(() => {
     const shared = {
       error,
@@ -138,6 +171,7 @@ export function DraftProvider({ children, players }: DraftProviderProps) {
       nextResetAt: getNextWeeklyResetDate(),
       selectPlayer,
       clearError,
+      addWaiverPlayer,
     }
 
     if (!draft || week == null) {
@@ -162,7 +196,7 @@ export function DraftProvider({ children, players }: DraftProviderProps) {
       isDraftComplete: computeIsDraftComplete(draft),
       ...shared,
     }
-  }, [draft, week, players, playersById, error, connectionError, selectPlayer, clearError])
+  }, [draft, week, players, playersById, error, connectionError, selectPlayer, clearError, addWaiverPlayer])
 
   return <DraftContext.Provider value={value}>{children}</DraftContext.Provider>
 }

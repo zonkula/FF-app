@@ -145,6 +145,17 @@ export async function update(refObj: { path: string }, patch: Record<string, unk
   fakeStore.update(refObj.path, patch)
 }
 
+let pushCounter = 0
+
+/** Real push() generates a unique child key; nothing here reads waiver activity logs back yet,
+ * so this just needs to store the value somewhere and not throw. */
+export async function push(refObj: { path: string }, value: unknown) {
+  const key = `fake-push-${Date.now()}-${pushCounter++}`
+  const childPath = `${refObj.path}/${key}`
+  fakeStore.set(childPath, value)
+  return { key, path: childPath }
+}
+
 export function onValue(refObj: { path: string }, onNext: (snapshot: { exists: () => boolean; val: () => unknown }) => void) {
   return fakeStore.subscribe(refObj.path, (value) => {
     onNext({ exists: () => value != null, val: () => value })

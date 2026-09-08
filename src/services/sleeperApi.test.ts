@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { fetchAllPlayers, fetchNflState, fetchWeeklyScores } from './sleeperApi'
+import { fetchAllPlayers, fetchNflState, fetchWeeklyProjections, fetchWeeklyScores } from './sleeperApi'
 
 function jsonResponse(body: unknown) {
   return { ok: true, status: 200, json: async () => body } as Response
@@ -100,5 +100,17 @@ describe('fetchWeeklyScores', () => {
     )
     const points = await fetchWeeklyScores('2026', 1)
     expect(points).toEqual({ '4984': 38.76 })
+  })
+})
+
+describe('fetchWeeklyProjections', () => {
+  it('extracts pts_ppr per player from the projections endpoint', async () => {
+    const fetchMock = vi.fn(() =>
+      Promise.resolve(jsonResponse({ '4984': { pts_ppr: 23.26 }, '650': { fga: 2 } })),
+    )
+    vi.stubGlobal('fetch', fetchMock)
+    const points = await fetchWeeklyProjections('2026', 1)
+    expect(points).toEqual({ '4984': 23.26 })
+    expect(fetchMock).toHaveBeenCalledWith(expect.stringContaining('/projections/nfl/regular/2026/1'))
   })
 })

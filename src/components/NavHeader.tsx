@@ -13,7 +13,7 @@ export function NavHeader() {
   return (
     <header className="border-b border-gray-800 p-4">
       <div className="mx-auto flex max-w-5xl flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <h1 className="text-center text-xl font-bold sm:text-left">FF App — 1v1 Weekly Draft (PPR)</h1>
+        <h1 className="text-center text-xl font-bold sm:text-left">Zonk vs Brakke </h1>
         <nav className="flex flex-wrap justify-center gap-1 sm:justify-end">
           <NavLink to="/draft" className={linkClassName}>
             Draft

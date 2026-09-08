@@ -10,6 +10,7 @@ vi.mock('firebase/database', () => ({
   get: fakeFirebase.get,
   set: fakeFirebase.set,
   update: fakeFirebase.update,
+  push: fakeFirebase.push,
   onValue: fakeFirebase.onValue,
   runTransaction: fakeFirebase.runTransaction,
 }))
@@ -122,5 +123,107 @@ describe('useDraft (Firebase-backed)', () => {
     expect(deviceB.result.current.currentTurn).toBe(2)
     // Device A sees its own write reflected back the same way, through the same sync path.
     expect(deviceA.result.current.playerOneRoster.map((p) => p.id)).toEqual(['p1'])
+  })
+
+  describe('addWaiverPlayer', () => {
+    // Two full 13-slot rosters (1 QB, 3 RB, 3 WR, 2 TE, 2 FLEX, 1 K, 1 DEF each), plus a few
+    // spare bench-eligible players left in the pool for waiver tests to add.
+    const SLOT_PATTERN: Player['position'][] = [
+      'QB', 'RB', 'RB', 'RB', 'WR', 'WR', 'WR', 'TE', 'TE', 'RB', 'WR', 'K', 'DEF',
+    ]
+
+    function makeFullDraftPlayers(): Player[] {
+      const players: Player[] = []
+      let n = 1
+      for (const position of SLOT_PATTERN) {
+        for (let i = 0; i < 2; i++) {
+          players.push({
+            id: `p${n}`,
+            name: `Player ${n}`,
+            position,
+            nflTeam: 'AAA',
+            adp: n,
+            byeWeek: 1,
+            pprPoints: 0,
+          })
+          n++
+        }
+      }
+      // A few spare players for waiver adds: an extra RB and an extra QB.
+      players.push({ id: 'waiver-rb', name: 'Waiver RB', position: 'RB', nflTeam: 'AAA', adp: 999, byeWeek: 1, pprPoints: 0 })
+      players.push({ id: 'waiver-qb', name: 'Waiver QB', position: 'QB', nflTeam: 'AAA', adp: 999, byeWeek: 1, pprPoints: 0 })
+      return players
+    }
+
+    async function draftToCompletion(result: { current: ReturnType<typeof useDraft> }, players: Player[]) {
+      const draftPicks = players.filter((p) => !p.id.startsWith('waiver-'))
+      for (const player of draftPicks) {
+        await act(async () => result.current.selectPlayer(player.id))
+      }
+      await waitFor(() => expect(result.current.isDraftComplete).toBe(true))
+    }
+
+    it('adds a player anytime with no turn restriction, given a same-position drop', async () => {
+      const players = makeFullDraftPlayers()
+      const { result } = renderHook(() => useDraft(), { wrapper: wrapperFor(players) })
+      await waitFor(() => expect(result.current.isConnected).toBe(true))
+      await draftToCompletion(result, players)
+
+      const player1RbId = result.current.playerOneRoster.find((p) => p.position === 'RB')!.id
+
+      // Player 2 moves immediately after player1's last pick - no "whose turn" gate for waivers.
+      let moveResult
+      await act(async () => {
+        moveResult = await result.current.addWaiverPlayer('waiver-rb', 1, player1RbId)
+      })
+      expect(moveResult).toEqual({ ok: true })
+      await waitFor(() => expect(result.current.playerOneRoster.map((p) => p.id)).toContain('waiver-rb'))
+      expect(result.current.playerOneRoster.map((p) => p.id)).not.toContain(player1RbId)
+      expect(result.current.availablePlayers.map((p) => p.id)).toContain(player1RbId)
+    })
+
+    it('rejects an add with no drop when the roster is already full', async () => {
+      const players = makeFullDraftPlayers()
+      const { result } = renderHook(() => useDraft(), { wrapper: wrapperFor(players) })
+      await waitFor(() => expect(result.current.isConnected).toBe(true))
+      await draftToCompletion(result, players)
+
+      let moveResult
+      await act(async () => {
+        moveResult = await result.current.addWaiverPlayer('waiver-rb', 1)
+      })
+      expect(moveResult).toEqual({ ok: false, reason: "Your roster is full - drop a player first." })
+    })
+
+    it('rejects a swap that leaves no valid slot for the added position', async () => {
+      const players = makeFullDraftPlayers()
+      const { result } = renderHook(() => useDraft(), { wrapper: wrapperFor(players) })
+      await waitFor(() => expect(result.current.isConnected).toBe(true))
+      await draftToCompletion(result, players)
+
+      const kickerId = result.current.playerOneRoster.find((p) => p.position === 'K')!.id
+      let moveResult: { ok: boolean; reason?: string } | undefined
+      await act(async () => {
+        moveResult = await result.current.addWaiverPlayer('waiver-qb', 1, kickerId)
+      })
+      expect(moveResult?.ok).toBe(false)
+      expect(moveResult?.reason).toMatch(/QB/)
+    })
+
+    it('both devices see a waiver add applied by only one of them, in real time', async () => {
+      const players = makeFullDraftPlayers()
+      const wrapper = wrapperFor(players)
+      const deviceA = renderHook(() => useDraft(), { wrapper })
+      const deviceB = renderHook(() => useDraft(), { wrapper })
+      await waitFor(() => expect(deviceA.result.current.isConnected).toBe(true))
+      await draftToCompletion(deviceA.result, players)
+      await waitFor(() => expect(deviceB.result.current.isDraftComplete).toBe(true))
+
+      const player2RbId = deviceB.result.current.playerTwoRoster.find((p) => p.position === 'RB')!.id
+      await act(async () => deviceA.result.current.addWaiverPlayer('waiver-rb', 2, player2RbId))
+
+      await waitFor(() => expect(deviceB.result.current.playerTwoRoster.map((p) => p.id)).toContain('waiver-rb'))
+      expect(deviceB.result.current.playerTwoRoster.map((p) => p.id)).not.toContain(player2RbId)
+    })
   })
 })

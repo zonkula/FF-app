@@ -105,13 +105,12 @@ export async function fetchAllPlayers(season: string): Promise<Player[]> {
   return players.sort((a, b) => a.adp - b.adp)
 }
 
-/** playerId -> actual PPR fantasy points scored that week. */
+/** playerId -> PPR fantasy points for a week (actual or projected, depending on the source). */
 export type WeeklyPoints = Record<string, number>
 
-/** Actual (not projected) PPR scoring for every player who played in a given season/week. */
-export async function fetchWeeklyScores(season: string, week: number): Promise<WeeklyPoints> {
-  const res = await fetch(`${SLEEPER_BASE}/v1/stats/nfl/regular/${season}/${week}`)
-  if (!res.ok) throw new Error(`Sleeper stats request failed: ${res.status}`)
+async function fetchPprPoints(url: string, kind: string): Promise<WeeklyPoints> {
+  const res = await fetch(url)
+  if (!res.ok) throw new Error(`Sleeper ${kind} request failed: ${res.status}`)
   const raw: Record<string, { pts_ppr?: number }> = await res.json()
 
   const points: WeeklyPoints = {}
@@ -121,4 +120,14 @@ export async function fetchWeeklyScores(season: string, week: number): Promise<W
     }
   }
   return points
+}
+
+/** Actual (not projected) PPR scoring for every player who played in a given season/week. */
+export async function fetchWeeklyScores(season: string, week: number): Promise<WeeklyPoints> {
+  return fetchPprPoints(`${SLEEPER_BASE}/v1/stats/nfl/regular/${season}/${week}`, 'stats')
+}
+
+/** Sleeper's own pre-game PPR projections for a season/week. */
+export async function fetchWeeklyProjections(season: string, week: number): Promise<WeeklyPoints> {
+  return fetchPprPoints(`${SLEEPER_BASE}/v1/projections/nfl/regular/${season}/${week}`, 'projections')
 }

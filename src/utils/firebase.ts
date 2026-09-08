@@ -1,4 +1,4 @@
-import { get, onValue, ref, runTransaction, set, type Unsubscribe } from 'firebase/database'
+import { get, onValue, push, ref, runTransaction, set, type Unsubscribe } from 'firebase/database'
 import { getFirebaseDatabase } from '../config/firebase'
 import {
   applyPick,
@@ -7,6 +7,7 @@ import {
   type LiveDraft,
   type PlayerSlot,
 } from '../context/draftLogic'
+import { applyWaiverMove, validateWaiverMove } from '../context/waiverLogic'
 import type { OrganizedRoster } from '../context/rosterRules'
 import { getNextWeeklyResetDate, ONE_WEEK_MS } from './season'
 import type { Player, Position } from '../types/player'
@@ -22,6 +23,7 @@ import type { Player, Position } from '../types/player'
  *                              — the permanent season record, kept forever.
  *     activeWeek               which week-{n} is currently live for drafting.
  *     nextResetDate            epoch ms for the next Tuesday-midnight rollover to a new week.
+ *     waiverActivity/week-{n}  append-only audit log of waiver adds/drops (who, what, when).
  *   players/{season}           cached Sleeper player pool (infra, not league data - kept outside
  *                              ff-league).
  */
@@ -128,6 +130,56 @@ export async function submitDraftPick(
   if (reason) return { ok: false, reason }
   if (!result.committed) return { ok: false, reason: 'Pick was rejected by a concurrent update. Try again.' }
   return { ok: true, draft: normalizeLiveDraft(result.snapshot.val()) as LiveDraft }
+}
+
+/**
+ * Conflict-safe waiver add (optionally paired with a drop, since a full 13-slot roster usually
+ * needs one to make room). Unlike submitDraftPick, this has no turn/status gate at all - either
+ * side can move anytime, first request to the transaction wins if both try to grab the same
+ * player at once.
+ */
+export async function submitWaiverMove(
+  week: number,
+  slot: PlayerSlot,
+  addPlayerId: string,
+  dropPlayerId: string | undefined,
+  playersById: Map<string, Player>,
+): Promise<{ ok: true; draft: LiveDraft } | { ok: false; reason: string }> {
+  let reason: string | null = null
+
+  const result = await runTransaction(ref(getFirebaseDatabase(), draftPath(week)), (current: unknown) => {
+    reason = null
+    const draft = normalizeLiveDraft(current)
+    if (!draft) {
+      reason = 'Draft has not been initialized for this week yet.'
+      return current
+    }
+    const validation = validateWaiverMove(draft, slot, addPlayerId, dropPlayerId, playersById)
+    if (!validation.ok) {
+      reason = validation.reason ?? 'Invalid move.'
+      return undefined
+    }
+    return applyWaiverMove(draft, slot, addPlayerId, dropPlayerId)
+  })
+
+  if (reason) return { ok: false, reason }
+  if (!result.committed) return { ok: false, reason: 'That move was rejected by a concurrent update. Try again.' }
+  return { ok: true, draft: normalizeLiveDraft(result.snapshot.val()) as LiveDraft }
+}
+
+export interface WaiverActivityEntry {
+  action: 'add' | 'swap'
+  by: PlayerSlot
+  addedPlayerId: string
+  addedPlayerName: string
+  droppedPlayerId?: string
+  droppedPlayerName?: string
+  at: number
+}
+
+/** Best-effort audit trail of who added/dropped which player and when - not read back by the UI today. */
+export async function logWaiverActivity(week: number, entry: WaiverActivityEntry): Promise<void> {
+  await push(ref(getFirebaseDatabase(), `${ROOT}/waiverActivity/week-${week}`), entry)
 }
 
 // ---- Rosters (organized by lineup slot) ------------------------------------
