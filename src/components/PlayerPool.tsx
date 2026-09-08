@@ -4,6 +4,8 @@ import type { Player, Position } from '../types/player'
 export interface PlayerPoolProps {
   players: Player[]
   onDraft: (playerId: string) => void
+  /** Whether the current roster still has an open slot for a given position. */
+  canDraft: (position: Position) => boolean
 }
 
 type PositionFilter = Position | 'ALL'
@@ -20,7 +22,7 @@ const POSITION_COLORS: Record<Position, string> = {
   DEF: 'bg-gray-500/20 text-gray-300',
 }
 
-export function PlayerPool({ players, onDraft }: PlayerPoolProps) {
+export function PlayerPool({ players, onDraft, canDraft }: PlayerPoolProps) {
   const [search, setSearch] = useState('')
   const [positionFilter, setPositionFilter] = useState<PositionFilter>('ALL')
   const [sortKey, setSortKey] = useState<SortKey>('adp')
@@ -92,28 +94,38 @@ export function PlayerPool({ players, onDraft }: PlayerPoolProps) {
               </tr>
             </thead>
             <tbody>
-              {visiblePlayers.map((player) => (
-                <tr key={player.id} className="border-b border-gray-800/50 last:border-0">
-                  <td className="py-2">
-                    <span className="text-gray-100">{player.name}</span>{' '}
-                    <span className={`ml-1 rounded px-1.5 py-0.5 text-xs ${POSITION_COLORS[player.position]}`}>
-                      {player.position}
-                    </span>
-                  </td>
-                  <td className="py-2 text-gray-400">{player.nflTeam}</td>
-                  <td className="py-2 text-gray-400">{player.adp}</td>
-                  <td className="py-2 text-gray-400">{player.byeWeek}</td>
-                  <td className="py-2 text-gray-400">{player.pprPoints.toFixed(0)}</td>
-                  <td className="py-2 text-right">
-                    <button
-                      onClick={() => onDraft(player.id)}
-                      className="rounded-md bg-sky-600 px-2.5 py-1 text-xs font-medium text-white hover:bg-sky-500"
-                    >
-                      Draft
-                    </button>
-                  </td>
-                </tr>
-              ))}
+              {visiblePlayers.map((player) => {
+                const draftable = canDraft(player.position)
+                return (
+                  <tr
+                    key={player.id}
+                    className={`border-b border-gray-800/50 last:border-0 ${draftable ? '' : 'opacity-40'}`}
+                  >
+                    <td className="py-2">
+                      <span className="text-gray-100">{player.name}</span>{' '}
+                      <span className={`ml-1 rounded px-1.5 py-0.5 text-xs ${POSITION_COLORS[player.position]}`}>
+                        {player.position}
+                      </span>
+                    </td>
+                    <td className="py-2 text-gray-400">{player.nflTeam}</td>
+                    <td className="py-2 text-gray-400">{player.adp}</td>
+                    <td className="py-2 text-gray-400">{player.byeWeek}</td>
+                    <td className="py-2 text-gray-400">{player.pprPoints.toFixed(0)}</td>
+                    <td className="py-2 text-right">
+                      <button
+                        onClick={() => onDraft(player.id)}
+                        disabled={!draftable}
+                        title={draftable ? undefined : 'No open roster slot for this position'}
+                        className={`rounded-md px-2.5 py-1 text-xs font-medium text-white ${
+                          draftable ? 'bg-sky-600 hover:bg-sky-500' : 'cursor-not-allowed bg-gray-700'
+                        }`}
+                      >
+                        Draft
+                      </button>
+                    </td>
+                  </tr>
+                )
+              })}
             </tbody>
           </table>
         )}

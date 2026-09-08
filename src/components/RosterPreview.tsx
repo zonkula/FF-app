@@ -1,5 +1,5 @@
 import type { Player } from '../types/player'
-import { ROSTER_SIZE } from '../context/DraftContext'
+import { FLEX_SLOTS, getSlotUsage, ROSTER_REQUIREMENTS, ROSTER_SIZE } from '../context/rosterRules'
 
 export interface RosterPreviewProps {
   label: string
@@ -10,13 +10,24 @@ export interface RosterPreviewProps {
 }
 
 export function RosterPreview({ label, roster, isActive, badge }: RosterPreviewProps) {
+  const { slotsUsed, flexUsed } = getSlotUsage(roster)
+  const slots = [
+    { label: 'QB', used: slotsUsed.QB, total: ROSTER_REQUIREMENTS.QB },
+    { label: 'RB', used: slotsUsed.RB, total: ROSTER_REQUIREMENTS.RB },
+    { label: 'WR', used: slotsUsed.WR, total: ROSTER_REQUIREMENTS.WR },
+    { label: 'TE', used: slotsUsed.TE, total: ROSTER_REQUIREMENTS.TE },
+    { label: 'FLEX', used: flexUsed, total: FLEX_SLOTS },
+    { label: 'K', used: slotsUsed.K, total: ROSTER_REQUIREMENTS.K },
+    { label: 'DEF', used: slotsUsed.DEF, total: ROSTER_REQUIREMENTS.DEF },
+  ]
+
   return (
     <div
       className={`rounded-lg border p-4 ${
         isActive ? 'border-sky-500 bg-sky-950/30' : 'border-gray-700 bg-gray-900'
       }`}
     >
-      <div className="mb-3 flex items-center justify-between">
+      <div className="mb-2 flex items-center justify-between">
         <h2 className="font-semibold text-gray-100">
           {label}
           {badge && (
@@ -28,6 +39,19 @@ export function RosterPreview({ label, roster, isActive, badge }: RosterPreviewP
         <span className="text-xs text-gray-400">
           {roster.length}/{ROSTER_SIZE} drafted
         </span>
+      </div>
+
+      <div className="mb-3 flex flex-wrap gap-1.5">
+        {slots.map((slot) => (
+          <span
+            key={slot.label}
+            className={`rounded px-1.5 py-0.5 text-[11px] ${
+              slot.used >= slot.total ? 'bg-gray-700 text-gray-400' : 'bg-gray-800 text-gray-300'
+            }`}
+          >
+            {slot.label} {slot.used}/{slot.total}
+          </span>
+        ))}
       </div>
 
       {roster.length === 0 ? (

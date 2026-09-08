@@ -1,13 +1,13 @@
 import { createContext, useCallback, useEffect, useMemo, useReducer, type ReactNode } from 'react'
 import type { Player } from '../types/player'
 import { mockPlayers } from '../data/mockPlayers'
+import { canDraftPosition, describeNoSlotError, ROSTER_SIZE } from './rosterRules'
 import { getNextWeeklyResetDate, getWeekId, weeksBetween } from '../utils/season'
 import { seededShuffle } from '../utils/shuffle'
 
 export type Turn = 1 | 2
 
-/** Number of picks each player's roster holds before the week's draft is complete. */
-export const ROSTER_SIZE = 8
+export { ROSTER_SIZE } from './rosterRules'
 
 const STORAGE_KEY = 'ff-app:draft-state:v1'
 
@@ -61,6 +61,11 @@ export function draftReducer(state: DraftState, action: DraftAction): DraftState
           state.playerOneRoster.some((p) => p.id === action.playerId) ||
           state.playerTwoRoster.some((p) => p.id === action.playerId)
         return { ...state, error: alreadyDrafted ? 'Player already drafted.' : 'Unknown player.' }
+      }
+
+      const currentRoster = state.currentTurn === 1 ? state.playerOneRoster : state.playerTwoRoster
+      if (!canDraftPosition(currentRoster, player.position)) {
+        return { ...state, error: describeNoSlotError(player.position) }
       }
 
       const availablePlayers = state.availablePlayers.filter((p) => p.id !== action.playerId)

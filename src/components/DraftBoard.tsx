@@ -1,5 +1,6 @@
 import type { Player } from '../types/player'
 import { useDraft } from '../hooks/useDraft'
+import { canDraftPosition } from '../context/rosterRules'
 import { TurnIndicator } from './TurnIndicator'
 import { RosterPreview } from './RosterPreview'
 import { PlayerPool } from './PlayerPool'
@@ -29,6 +30,7 @@ export function DraftBoard() {
   } = useDraft()
 
   const handleDraft = (playerId: string) => selectPlayer(playerId, currentTurn)
+  const currentRoster = currentTurn === 1 ? playerOneRoster : playerTwoRoster
 
   return (
     <div className="mx-auto max-w-5xl space-y-4 p-4">
@@ -57,7 +59,11 @@ export function DraftBoard() {
             <RosterPreview label="Player 2" roster={playerTwoRoster} isActive={currentTurn === 2} />
           </div>
 
-          <PlayerPool players={availablePlayers} onDraft={handleDraft} />
+          <PlayerPool
+            players={availablePlayers}
+            onDraft={handleDraft}
+            canDraft={(position) => canDraftPosition(currentRoster, position)}
+          />
         </>
       )}
     </div>
