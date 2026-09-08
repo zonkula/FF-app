@@ -3,32 +3,14 @@
     ".read": false,
     ".write": false,
 
-    "drafts": {
-      "$weekId": {
-        ".read": "auth != null",
-        ".write": "auth != null"
-      }
+    "ff-league": {
+      ".read": "auth != null",
+      ".write": "auth != null"
     },
 
-    "leagueHistory": {
-      "$weekId": {
-        ".read": "auth != null",
-        ".write": "auth != null"
-      }
-    },
-
-    "playersCache": {
-      "$season": {
-        ".read": "auth != null",
-        ".write": "auth != null"
-      }
-    },
-
-    "users": {
-      "$uid": {
-        ".read": "auth != null",
-        ".write": "auth != null && auth.uid === $uid"
-      }
+    "players": {
+      ".read": "auth != null",
+      ".write": "auth != null"
     }
   }
 }
