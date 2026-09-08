@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef } from 'react'
 import type { Player } from '../types/player'
 import { useDraft } from '../hooks/useDraft'
 import { useWeeklyScores } from '../hooks/useWeeklyScores'
@@ -6,6 +6,7 @@ import { useSeasonRecord } from '../hooks/useSeasonRecord'
 import { usePlayers } from '../context/PlayersContext'
 import { canDraftPosition } from '../context/rosterRules'
 import { saveDraftHistory, type PlayerHistoryLine } from '../utils/firebase'
+import { PLAYER_DISPLAY_NAMES } from '../utils/playerNames'
 import { TurnIndicator } from './TurnIndicator'
 import { RosterPreview } from './RosterPreview'
 import { PlayerPool } from './PlayerPool'
@@ -36,8 +37,7 @@ export function DraftBoard() {
     clearError,
   } = useDraft()
 
-  const [historyVersion, setHistoryVersion] = useState(0)
-  const seasonRecord = useSeasonRecord(historyVersion)
+  const seasonRecord = useSeasonRecord()
 
   const handleDraft = (playerId: string) => selectPlayer(playerId, currentTurn)
   const currentRoster = currentTurn === 1 ? playerOneRoster : playerTwoRoster
@@ -59,8 +59,8 @@ export function DraftBoard() {
       <div className="flex flex-col gap-1 text-xs text-gray-400 sm:flex-row sm:justify-between">
         <span>Week {weekNumber}</span>
         <span>
-          Season record: Player 1 {seasonRecord.player1.wins}-{seasonRecord.player1.losses}
-          {seasonRecord.player1.ties > 0 ? `-${seasonRecord.player1.ties}` : ''} · Player 2{' '}
+          Season record: {PLAYER_DISPLAY_NAMES.player1} {seasonRecord.player1.wins}-{seasonRecord.player1.losses}
+          {seasonRecord.player1.ties > 0 ? `-${seasonRecord.player1.ties}` : ''} · {PLAYER_DISPLAY_NAMES.player2}{' '}
           {seasonRecord.player2.wins}-{seasonRecord.player2.losses}
           {seasonRecord.player2.ties > 0 ? `-${seasonRecord.player2.ties}` : ''}
         </span>
@@ -81,15 +81,14 @@ export function DraftBoard() {
           weekNumber={weekNumber}
           playerOneRoster={playerOneRoster}
           playerTwoRoster={playerTwoRoster}
-          onHistorySaved={() => setHistoryVersion((v) => v + 1)}
         />
       ) : (
         <>
           <TurnIndicator currentTurn={currentTurn} />
 
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <RosterPreview label="Player 1" roster={playerOneRoster} isActive={currentTurn === 1} />
-            <RosterPreview label="Player 2" roster={playerTwoRoster} isActive={currentTurn === 2} />
+            <RosterPreview label={PLAYER_DISPLAY_NAMES.player1} roster={playerOneRoster} isActive={currentTurn === 1} />
+            <RosterPreview label={PLAYER_DISPLAY_NAMES.player2} roster={playerTwoRoster} isActive={currentTurn === 2} />
           </div>
 
           <PlayerPool
@@ -107,7 +106,6 @@ interface DraftCompleteSummaryProps {
   weekNumber: number
   playerOneRoster: Player[]
   playerTwoRoster: Player[]
-  onHistorySaved: () => void
 }
 
 function toHistoryLines(roster: Player[], scores: Record<string, number>): PlayerHistoryLine[] {
@@ -119,7 +117,7 @@ function toHistoryLines(roster: Player[], scores: Record<string, number>): Playe
   }))
 }
 
-function DraftCompleteSummary({ weekNumber, playerOneRoster, playerTwoRoster, onHistorySaved }: DraftCompleteSummaryProps) {
+function DraftCompleteSummary({ weekNumber, playerOneRoster, playerTwoRoster }: DraftCompleteSummaryProps) {
   const { week } = usePlayers()
   // Both calls share one Sleeper request (see useWeeklyScores' dedup cache) since they're for
   // the same NFL week - only the roster used to sum totalPoints differs.
@@ -139,9 +137,7 @@ function DraftCompleteSummary({ weekNumber, playerOneRoster, playerTwoRoster, on
       player1Roster: toHistoryLines(playerOneRoster, scores),
       player2Roster: toHistoryLines(playerTwoRoster, scores),
       completedAt: Date.now(),
-    })
-      .then(onHistorySaved)
-      .catch(() => {})
+    }).catch(() => {})
     // Intentionally only re-runs when the completed week changes, not on every score refetch.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [weekNumber, scoresLoading])
@@ -159,13 +155,13 @@ function DraftCompleteSummary({ weekNumber, playerOneRoster, playerTwoRoster, on
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <RosterPreview
-          label={`Player 1 · ${p1Total.toFixed(0)} pts`}
+          label={`${PLAYER_DISPLAY_NAMES.player1} · ${p1Total.toFixed(0)} pts`}
           roster={playerOneRoster}
           isActive={false}
           badge={gamesReported && p1Total > p2Total ? 'Leading' : undefined}
         />
         <RosterPreview
-          label={`Player 2 · ${p2Total.toFixed(0)} pts`}
+          label={`${PLAYER_DISPLAY_NAMES.player2} · ${p2Total.toFixed(0)} pts`}
           roster={playerTwoRoster}
           isActive={false}
           badge={gamesReported && p2Total > p1Total ? 'Leading' : undefined}

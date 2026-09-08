@@ -3,10 +3,11 @@ import { Link } from 'react-router-dom'
 import type { Player, Position } from '../types/player'
 import { useDraft } from '../hooks/useDraft'
 import { usePlayers } from '../context/PlayersContext'
+import { useViewer } from '../context/ViewerContext'
 import { useWeeklyProjections } from '../hooks/useWeeklyProjections'
 import { canDraftPosition } from '../context/rosterRules'
 import { POSITION_COLORS } from '../utils/positionColors'
-import type { Turn } from '../context/DraftContext'
+import { displayNameForTurn } from '../utils/playerNames'
 
 type PositionFilter = Position | 'ALL'
 const POSITIONS: PositionFilter[] = ['ALL', 'QB', 'RB', 'WR', 'TE', 'K', 'DEF']
@@ -23,7 +24,7 @@ export function WaiverPage() {
   } = useDraft()
   const { projections } = useWeeklyProjections(week)
 
-  const [actingAs, setActingAs] = useState<Turn>(1)
+  const { viewer: actingAs, setViewer: setActingAs } = useViewer()
   const [search, setSearch] = useState('')
   const [positionFilter, setPositionFilter] = useState<PositionFilter>('ALL')
   const [pendingAdd, setPendingAdd] = useState<Player | null>(null)
@@ -64,7 +65,7 @@ export function WaiverPage() {
     if (canDraftPosition(currentRoster, player.position)) {
       const result = await addWaiverPlayer(player.id, actingAs)
       if (result.ok) {
-        setToast(`Added ${player.name} to Player ${actingAs}'s roster.`)
+        setToast(`Added ${player.name} to ${displayNameForTurn(actingAs)}'s roster.`)
       } else {
         setActionError(result.reason ?? 'Could not add player.')
       }
@@ -78,7 +79,7 @@ export function WaiverPage() {
     if (!pendingAdd) return
     const result = await addWaiverPlayer(pendingAdd.id, actingAs, dropPlayer.id)
     if (result.ok) {
-      setToast(`Added ${pendingAdd.name}, dropped ${dropPlayer.name} (Player ${actingAs}).`)
+      setToast(`Added ${pendingAdd.name}, dropped ${dropPlayer.name} (${displayNameForTurn(actingAs)}).`)
       setPendingAdd(null)
       setActionError(null)
     } else {
@@ -103,7 +104,7 @@ export function WaiverPage() {
                 actingAs === turn ? 'bg-sky-600 text-white' : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
               }`}
             >
-              Player {turn}
+              {displayNameForTurn(turn)}
             </button>
           ))}
         </div>

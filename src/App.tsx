@@ -1,6 +1,7 @@
 import { AdminAuthProvider } from './context/AdminAuthContext'
 import { PlayersProvider, usePlayers } from './context/PlayersContext'
 import { DraftProvider } from './context/DraftContext'
+import { ViewerProvider } from './context/ViewerContext'
 import { NavHeader } from './components/NavHeader'
 import { ErrorBoundary } from './components/ErrorBoundary'
 import { AppRoutes } from './routes/AppRoutes'
@@ -8,12 +9,14 @@ import { AppRoutes } from './routes/AppRoutes'
 function App() {
   return (
     <AdminAuthProvider>
-      <PlayersProvider>
-        <div className="min-h-screen bg-gray-950 text-white">
-          <NavHeader />
-          <AppContent />
-        </div>
-      </PlayersProvider>
+      <ViewerProvider>
+        <PlayersProvider>
+          <div className="min-h-screen bg-gray-950 text-white">
+            <NavHeader />
+            <AppContent />
+          </div>
+        </PlayersProvider>
+      </ViewerProvider>
     </AdminAuthProvider>
   )
 }

@@ -222,12 +222,24 @@ export async function loadDraftHistorySingleWeek(week: number): Promise<WeekHist
   return (snapshot.val() as WeekHistoryEntry | null) ?? null
 }
 
+function parseHistorySnapshot(raw: unknown): WeekHistoryEntry[] {
+  if (!raw) return []
+  const value = raw as Record<string, WeekHistoryEntry>
+  return Object.values(value).sort((a, b) => a.week - b.week)
+}
+
 /** Every completed week on record, sorted oldest first (the "reflect on the year" view). */
 export async function loadDraftHistory(): Promise<WeekHistoryEntry[]> {
   const snapshot = await get(ref(getFirebaseDatabase(), `${ROOT}/history`))
-  if (!snapshot.exists()) return []
-  const value = snapshot.val() as Record<string, WeekHistoryEntry>
-  return Object.values(value).sort((a, b) => a.week - b.week)
+  return parseHistorySnapshot(snapshot.val())
+}
+
+/** Live updates to the full history list - so Standings/Matchup reflect a newly-completed week
+ * on the other player's device without a manual refresh. */
+export function subscribeToHistory(onChange: (history: WeekHistoryEntry[]) => void): Unsubscribe {
+  return onValue(ref(getFirebaseDatabase(), `${ROOT}/history`), (snapshot) => {
+    onChange(parseHistorySnapshot(snapshot.val()))
+  })
 }
 
 export interface SeasonRecord {
@@ -235,9 +247,8 @@ export interface SeasonRecord {
   player2: { wins: number; losses: number; ties: number }
 }
 
-/** Derived from history rather than a separately-maintained counter, so it can never drift out of sync. */
-export async function getSeasonRecord(): Promise<SeasonRecord> {
-  const history = await loadDraftHistory()
+/** Pure and synchronous so it can be reused by both a one-off fetch and a live subscription. */
+export function computeSeasonRecord(history: WeekHistoryEntry[]): SeasonRecord {
   const record: SeasonRecord = {
     player1: { wins: 0, losses: 0, ties: 0 },
     player2: { wins: 0, losses: 0, ties: 0 },
@@ -255,6 +266,11 @@ export async function getSeasonRecord(): Promise<SeasonRecord> {
     }
   }
   return record
+}
+
+/** Derived from history rather than a separately-maintained counter, so it can never drift out of sync. */
+export async function getSeasonRecord(): Promise<SeasonRecord> {
+  return computeSeasonRecord(await loadDraftHistory())
 }
 
 // ---- Active week / weekly reset clock --------------------------------------

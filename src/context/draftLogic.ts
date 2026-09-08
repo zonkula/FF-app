@@ -1,5 +1,6 @@
 import type { Player } from '../types/player'
 import { canDraftPosition, describeNoSlotError, ROSTER_SIZE } from './rosterRules'
+import { displayNameForSlot } from '../utils/playerNames'
 
 export type PlayerSlot = 'player1' | 'player2'
 export type DraftStatus = 'in-progress' | 'complete'
@@ -54,8 +55,7 @@ export function validatePick(
     return { ok: false, reason: "This week's draft is already complete." }
   }
   if (draft.currentTurn !== slot) {
-    const whoseTurn = draft.currentTurn === 'player1' ? 'Player 1' : 'Player 2'
-    return { ok: false, reason: `It's ${whoseTurn}'s turn.` }
+    return { ok: false, reason: `It's ${displayNameForSlot(draft.currentTurn)}'s turn.` }
   }
   if (draft.player1Picks.includes(playerId) || draft.player2Picks.includes(playerId)) {
     return { ok: false, reason: 'Player already drafted.' }
