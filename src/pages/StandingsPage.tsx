@@ -6,7 +6,7 @@ import type { WeekHistoryEntry } from '../utils/firebase'
 import type { PlayerSlot } from '../context/draftLogic'
 
 type SortOrder = 'newest' | 'oldest'
-
+//
 export function StandingsPage() {
   const { history, loading } = useLeagueHistory()
   const seasonRecord = useSeasonRecord()
