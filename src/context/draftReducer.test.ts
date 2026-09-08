@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { Player, Position } from '../types/player'
-import { createInitialDraftState, draftReducer, isDraftComplete } from './DraftContext'
+import { createInitialDraftState, draftReducer, isDraftComplete } from './draftReducer'
 import { ROSTER_SIZE } from './rosterRules'
 
 function makePlayer(n: number, position: Position = 'RB'): Player {
@@ -19,9 +19,13 @@ function makePlayers(n: number): Player[] {
   return Array.from({ length: n }, (_, i) => makePlayer(i + 1))
 }
 
+function initialState(players: Player[]) {
+  return createInitialDraftState(players, 'test-week-1', 1)
+}
+
 describe('draftReducer - turn alternation', () => {
   it('alternates currentTurn and assigns picks to the correct roster', () => {
-    let state = createInitialDraftState(makePlayers(6))
+    let state = initialState(makePlayers(6))
 
     state = draftReducer(state, { type: 'SELECT_PLAYER', playerId: 'p1' })
     expect(state.currentTurn).toBe(2)
@@ -37,7 +41,7 @@ describe('draftReducer - turn alternation', () => {
   })
 
   it('removes drafted players from the available pool', () => {
-    let state = createInitialDraftState(makePlayers(6))
+    let state = initialState(makePlayers(6))
     state = draftReducer(state, { type: 'SELECT_PLAYER', playerId: 'p1' })
     expect(state.availablePlayers.map((p) => p.id)).not.toContain('p1')
     expect(state.availablePlayers).toHaveLength(5)
@@ -46,7 +50,7 @@ describe('draftReducer - turn alternation', () => {
 
 describe('draftReducer - picks are locked in', () => {
   it('rejects drafting the same player twice and leaves rosters unchanged', () => {
-    let state = createInitialDraftState(makePlayers(6))
+    let state = initialState(makePlayers(6))
     state = draftReducer(state, { type: 'SELECT_PLAYER', playerId: 'p1' })
     const before = state
 
@@ -58,7 +62,7 @@ describe('draftReducer - picks are locked in', () => {
   })
 
   it('rejects an unknown player id', () => {
-    const state = createInitialDraftState(makePlayers(6))
+    const state = initialState(makePlayers(6))
     const after = draftReducer(state, { type: 'SELECT_PLAYER', playerId: 'not-a-real-id' })
     expect(after.error).toBe('Unknown player.')
     expect(after.currentTurn).toBe(1)
@@ -67,7 +71,7 @@ describe('draftReducer - picks are locked in', () => {
 
 describe('draftReducer - out-of-turn picks', () => {
   it('rejects a pick made as the wrong player and leaves the turn unchanged', () => {
-    const state = createInitialDraftState(makePlayers(6))
+    const state = initialState(makePlayers(6))
     const after = draftReducer(state, { type: 'SELECT_PLAYER', playerId: 'p1', asPlayer: 2 })
     expect(after.error).toMatch(/turn/i)
     expect(after.currentTurn).toBe(1)
@@ -76,7 +80,7 @@ describe('draftReducer - out-of-turn picks', () => {
   })
 
   it('accepts a pick made as the correct player', () => {
-    const state = createInitialDraftState(makePlayers(6))
+    const state = initialState(makePlayers(6))
     const after = draftReducer(state, { type: 'SELECT_PLAYER', playerId: 'p1', asPlayer: 1 })
     expect(after.error).toBeNull()
     expect(after.playerOneRoster.map((p) => p.id)).toEqual(['p1'])
@@ -86,7 +90,7 @@ describe('draftReducer - out-of-turn picks', () => {
 describe('draftReducer - position slot limits', () => {
   it('rejects a second QB since QB has no FLEX eligibility', () => {
     const players = [makePlayer(1, 'QB'), makePlayer(2, 'QB'), makePlayer(3, 'QB')]
-    let state = createInitialDraftState(players)
+    let state = initialState(players)
     state = draftReducer(state, { type: 'SELECT_PLAYER', playerId: 'p1' }) // Player 1's QB slot
     state = draftReducer(state, { type: 'SELECT_PLAYER', playerId: 'p2' }) // Player 2's QB slot
 
@@ -111,7 +115,7 @@ describe('draftReducer - position slot limits', () => {
       makePlayer(10, 'QB'),
       makePlayer(11, 'RB'),
     ]
-    let state = createInitialDraftState(players)
+    let state = initialState(players)
     for (const id of ['p1', 'p2', 'p3', 'p4', 'p5', 'p6', 'p7', 'p8', 'p9', 'p10']) {
       state = draftReducer(state, { type: 'SELECT_PLAYER', playerId: id })
       expect(state.error).toBeNull()
@@ -139,7 +143,7 @@ describe('draftReducer - draft completion', () => {
 
   it('marks the draft complete once both rosters fill every required slot, and blocks further picks', () => {
     const players = makeFullDraftPlayers()
-    let state = createInitialDraftState(players)
+    let state = initialState(players)
 
     for (const p of players) {
       state = draftReducer(state, { type: 'SELECT_PLAYER', playerId: p.id })
@@ -158,8 +162,8 @@ describe('draftReducer - draft completion', () => {
 })
 
 describe('draftReducer - weekly reset', () => {
-  it('clears rosters, restores the full player pool, and resets currentTurn to 1', () => {
-    let state = createInitialDraftState(makePlayers(6))
+  it('clears rosters, restores the full player pool, resets currentTurn to 1, and adopts the new week id/number', () => {
+    let state = initialState(makePlayers(6))
     state = draftReducer(state, { type: 'SELECT_PLAYER', playerId: 'p1' })
 
     const freshPlayers = makePlayers(6)
@@ -167,7 +171,7 @@ describe('draftReducer - weekly reset', () => {
       type: 'RESET_WEEK',
       players: freshPlayers,
       weekId: '2026-09-15',
-      weeksElapsed: 1,
+      weekNumber: 2,
     })
 
     expect(state.availablePlayers).toEqual(freshPlayers)
