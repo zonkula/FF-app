@@ -11,4 +11,6 @@ export interface Player {
   byeWeek: number
   /** Projected/actual PPR fantasy points, used for scoring after the draft. */
   pprPoints: number
+  /** ESPN's player id, used to build a headshot URL. Null when Sleeper has no mapping (e.g. team defenses). */
+  espnId: string | null
 }

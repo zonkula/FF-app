@@ -10,11 +10,14 @@ import type { WeeklyPoints } from '../services/sleeperApi'
 import { formatRelativeTime } from '../utils/relativeTime'
 import { POSITION_COLORS } from '../utils/positionColors'
 import { PLAYER_DISPLAY_NAMES } from '../utils/playerNames'
+import { PlayerAvatar } from '../components/PlayerAvatar'
 
 interface DisplayLine {
   id: string
   name: string
   position: Position
+  nflTeam: string
+  espnId: string | null
   actual: number | null
   projected: number | null
 }
@@ -24,6 +27,8 @@ function toDisplayLines(roster: Player[], scores: WeeklyPoints, projections: Wee
     id: p.id,
     name: p.name,
     position: p.position,
+    nflTeam: p.nflTeam,
+    espnId: p.espnId,
     actual: scores[p.id] ?? null,
     projected: projections[p.id] ?? null,
   }))
@@ -34,6 +39,8 @@ function historyToDisplayLines(lines: PlayerHistoryLine[]): DisplayLine[] {
     id: line.playerId,
     name: line.name,
     position: line.position,
+    nflTeam: line.nflTeam,
+    espnId: line.espnId ?? null,
     actual: line.points,
     projected: null,
   }))
@@ -270,10 +277,15 @@ function RosterLinesCard({
             {lines.map((line) => (
               <tr key={line.id} className="border-b border-gray-800/50 last:border-0">
                 <td className="py-1.5">
-                  <span className="text-gray-200">{line.name}</span>{' '}
-                  <span className={`rounded px-1.5 py-0.5 text-xs ${POSITION_COLORS[line.position]}`}>
-                    {line.position}
-                  </span>
+                  <div className="flex items-center gap-2">
+                    <PlayerAvatar player={line} />
+                    <span>
+                      <span className="text-gray-200">{line.name}</span>{' '}
+                      <span className={`rounded px-1.5 py-0.5 text-xs ${POSITION_COLORS[line.position]}`}>
+                        {line.position}
+                      </span>
+                    </span>
+                  </div>
                 </td>
                 {showProjected && (
                   <td className="py-1.5 text-right text-gray-500">

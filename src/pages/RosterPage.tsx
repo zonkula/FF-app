@@ -7,6 +7,7 @@ import { useWeeklyProjections } from '../hooks/useWeeklyProjections'
 import { organizeRosterByPosition, type OrganizedRoster } from '../context/rosterRules'
 import { POSITION_COLORS } from '../utils/positionColors'
 import { displayNameForTurn, turnForPlayerName } from '../utils/playerNames'
+import { PlayerAvatar } from '../components/PlayerAvatar'
 import type { Turn } from '../context/DraftContext'
 import type { WeeklyPoints } from '../services/sleeperApi'
 
@@ -117,13 +118,16 @@ export function RosterPage() {
                         key={player.id}
                         className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 rounded px-2 py-1.5 hover:bg-gray-800/50"
                       >
-                        <span className="text-gray-200">
-                          {player.name}{' '}
-                          <span className={`rounded px-1.5 py-0.5 text-xs ${POSITION_COLORS[player.position]}`}>
-                            {player.position}
-                          </span>{' '}
-                          <span className="text-xs text-gray-500">
-                            {player.nflTeam} · Bye {player.byeWeek}
+                        <span className="flex items-center gap-3 text-gray-200">
+                          <PlayerAvatar player={player} size="lg" />
+                          <span>
+                            {player.name}{' '}
+                            <span className={`rounded px-1.5 py-0.5 text-xs ${POSITION_COLORS[player.position]}`}>
+                              {player.position}
+                            </span>{' '}
+                            <span className="text-xs text-gray-500">
+                              {player.nflTeam} · Bye {player.byeWeek}
+                            </span>
                           </span>
                         </span>
                         <div className="flex shrink-0 items-center gap-3">
@@ -216,12 +220,15 @@ function FlexSwapPicker({ outgoing, candidates, projections, error, onCancel, on
         ) : (
           sorted.map((player) => (
             <li key={player.id} className="flex items-center justify-between gap-2 text-sm">
-              <span className="text-gray-200">
-                {player.name}{' '}
-                <span className={`rounded px-1.5 py-0.5 text-xs ${POSITION_COLORS[player.position]}`}>
-                  {player.position}
-                </span>{' '}
-                <span className="text-xs text-gray-500">{(projections[player.id] ?? 0).toFixed(1)} pts</span>
+              <span className="flex items-center gap-2 text-gray-200">
+                <PlayerAvatar player={player} />
+                <span>
+                  {player.name}{' '}
+                  <span className={`rounded px-1.5 py-0.5 text-xs ${POSITION_COLORS[player.position]}`}>
+                    {player.position}
+                  </span>{' '}
+                  <span className="text-xs text-gray-500">{(projections[player.id] ?? 0).toFixed(1)} pts</span>
+                </span>
               </span>
               <button
                 onClick={() => onConfirm(player)}

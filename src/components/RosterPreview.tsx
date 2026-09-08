@@ -1,5 +1,6 @@
 import type { Player } from '../types/player'
 import { FLEX_SLOTS, getSlotUsage, ROSTER_REQUIREMENTS, ROSTER_SIZE } from '../context/rosterRules'
+import { PlayerAvatar } from './PlayerAvatar'
 
 export interface RosterPreviewProps {
   label: string
@@ -60,7 +61,10 @@ export function RosterPreview({ label, roster, isActive, badge }: RosterPreviewP
         <ul className="space-y-1">
           {roster.map((player) => (
             <li key={player.id} className="flex items-center justify-between text-sm">
-              <span className="text-gray-200">{player.name}</span>
+              <span className="flex items-center gap-2">
+                <PlayerAvatar player={player} />
+                <span className="text-gray-200">{player.name}</span>
+              </span>
               <span className="text-gray-500">
                 {player.position} · {player.nflTeam}
               </span>

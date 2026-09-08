@@ -15,7 +15,7 @@ vi.mock('../context/PlayersContext', () => ({
 const { useWeeklyScores } = await import('./useWeeklyScores')
 
 function player(id: string): Player {
-  return { id, name: id, position: 'RB', nflTeam: 'AAA', adp: 1, byeWeek: 1, pprPoints: 0 }
+  return { id, name: id, position: 'RB', nflTeam: 'AAA', adp: 1, byeWeek: 1, pprPoints: 0, espnId: null }
 }
 
 describe('useWeeklyScores', () => {

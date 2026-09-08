@@ -8,6 +8,7 @@ import { useWeeklyProjections } from '../hooks/useWeeklyProjections'
 import { canDraftPosition } from '../context/rosterRules'
 import { POSITION_COLORS } from '../utils/positionColors'
 import { turnForPlayerName } from '../utils/playerNames'
+import { PlayerAvatar } from '../components/PlayerAvatar'
 
 type PositionFilter = Position | 'ALL'
 const POSITIONS: PositionFilter[] = ['ALL', 'QB', 'RB', 'WR', 'TE', 'K', 'DEF']
@@ -179,11 +180,16 @@ export function WaiverPage() {
                 {visiblePlayers.map((player) => (
                   <tr key={player.id} className="border-b border-gray-800/50 last:border-0">
                     <td className="py-2">
-                      <span className="text-gray-100">{player.name}</span>{' '}
-                      <span className={`ml-1 rounded px-1.5 py-0.5 text-xs ${POSITION_COLORS[player.position]}`}>
-                        {player.position}
-                      </span>{' '}
-                      <span className="text-xs text-gray-500">{player.nflTeam}</span>
+                      <div className="flex items-center gap-2">
+                        <PlayerAvatar player={player} />
+                        <span>
+                          <span className="text-gray-100">{player.name}</span>{' '}
+                          <span className={`ml-1 rounded px-1.5 py-0.5 text-xs ${POSITION_COLORS[player.position]}`}>
+                            {player.position}
+                          </span>{' '}
+                          <span className="text-xs text-gray-500">{player.nflTeam}</span>
+                        </span>
+                      </div>
                     </td>
                     <td className="py-2 text-gray-400">{player.byeWeek}</td>
                     <td className="py-2 text-gray-400">{(projections[player.id] ?? 0).toFixed(1)}</td>
@@ -240,8 +246,11 @@ function DropPicker({ addPlayer, roster, error, onCancel, onConfirm }: DropPicke
           )
           return (
             <li key={player.id} className="flex items-center justify-between gap-2 text-sm">
-              <span className={wouldWork ? 'text-gray-200' : 'text-gray-500'}>
-                {player.name} <span className="text-xs text-gray-500">({player.position})</span>
+              <span className="flex items-center gap-2">
+                <PlayerAvatar player={player} />
+                <span className={wouldWork ? 'text-gray-200' : 'text-gray-500'}>
+                  {player.name} <span className="text-xs text-gray-500">({player.position})</span>
+                </span>
               </span>
               <button
                 onClick={() => onConfirm(player)}

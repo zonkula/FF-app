@@ -19,6 +19,7 @@ function player(position: Position, n: number): Player {
     adp: n,
     byeWeek: 1,
     pprPoints: 100,
+    espnId: null,
   }
 }
 

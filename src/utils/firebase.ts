@@ -201,6 +201,9 @@ export interface PlayerHistoryLine {
   name: string
   position: Position
   points: number
+  nflTeam: string
+  /** Absent on history saved before headshots were added - the avatar falls back to initials. */
+  espnId: string | null
 }
 
 export interface WeekHistoryEntry {

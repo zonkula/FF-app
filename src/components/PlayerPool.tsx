@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import type { Player, Position } from '../types/player'
 import { POSITION_COLORS } from '../utils/positionColors'
+import { PlayerAvatar } from './PlayerAvatar'
 
 export interface PlayerPoolProps {
   players: Player[]
@@ -94,10 +95,15 @@ export function PlayerPool({ players, onDraft, canDraft }: PlayerPoolProps) {
                     className={`border-b border-gray-800/50 last:border-0 ${draftable ? '' : 'opacity-40'}`}
                   >
                     <td className="py-2">
-                      <span className="text-gray-100">{player.name}</span>{' '}
-                      <span className={`ml-1 rounded px-1.5 py-0.5 text-xs ${POSITION_COLORS[player.position]}`}>
-                        {player.position}
-                      </span>
+                      <div className="flex items-center gap-2">
+                        <PlayerAvatar player={player} />
+                        <span>
+                          <span className="text-gray-100">{player.name}</span>{' '}
+                          <span className={`ml-1 rounded px-1.5 py-0.5 text-xs ${POSITION_COLORS[player.position]}`}>
+                            {player.position}
+                          </span>
+                        </span>
+                      </div>
                     </td>
                     <td className="py-2 text-gray-400">{player.nflTeam}</td>
                     <td className="py-2 text-gray-400">{player.adp}</td>
