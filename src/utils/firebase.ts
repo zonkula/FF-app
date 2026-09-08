@@ -1,137 +1,265 @@
-import { get, onValue, ref, runTransaction, set, update, type Unsubscribe } from 'firebase/database'
+import { get, onValue, ref, runTransaction, set, type Unsubscribe } from 'firebase/database'
 import { getFirebaseDatabase } from '../config/firebase'
-import { createInitialDraftState, draftReducer, type DraftAction, type DraftState } from '../context/draftReducer'
-import type { Player } from '../types/player'
+import {
+  applyPick,
+  createLiveDraft,
+  validatePick,
+  type LiveDraft,
+  type PlayerSlot,
+} from '../context/draftLogic'
+import type { OrganizedRoster } from '../context/rosterRules'
+import { getNextWeeklyResetDate, ONE_WEEK_MS } from './season'
+import type { Player, Position } from '../types/player'
 
 /**
  * Realtime Database layout:
- *   drafts/{weekId}         live DraftState for that week — every connected device subscribes
- *                           here and sees updates in real time.
- *   leagueHistory/{weekId}  permanent scoring record written once a week's draft completes
- *                           (final rosters + point totals) — survives even after `drafts/{weekId}`
- *                           is superseded by the next week.
- *   users/{uid}             minimal presence record per anonymous session.
- *   playersCache/{season}   cached Sleeper player pool, so clients don't hammer the Sleeper API.
+ *   ff-league/
+ *     drafts/week-{n}          live picks/turn/status for that week - every device subscribes
+ *                              here and sees updates in real time.
+ *     rosters/week-{n}/player1 that week's roster grouped by lineup slot (QB/RB/WR/TE/FLEX/K/DEF).
+ *     rosters/week-{n}/player2 ...
+ *     history/week-{n}         {player1Score, player2Score, winner, per-player breakdowns}
+ *                              — the permanent season record, kept forever.
+ *     activeWeek               which week-{n} is currently live for drafting.
+ *     nextResetDate            epoch ms for the next Tuesday-midnight rollover to a new week.
+ *   playersCache/{season}      cached Sleeper player pool (infra, not league data - kept outside
+ *                              ff-league).
  */
 
-function draftPath(weekId: string): string {
-  return `drafts/${weekId}`
+const ROOT = 'ff-league'
+
+function draftPath(week: number): string {
+  return `${ROOT}/drafts/week-${week}`
 }
 
-function historyPath(weekId: string): string {
-  return `leagueHistory/${weekId}`
+function rosterPath(week: number, slot: PlayerSlot): string {
+  return `${ROOT}/rosters/week-${week}/${slot}`
 }
 
-/**
- * The Realtime Database silently drops empty arrays/objects on write — a `[]` stored there reads
- * back as `undefined`, not `[]`. Every `DraftState` that comes out of a snapshot goes through this
- * so the rest of the app can keep assuming `availablePlayers`/`playerOneRoster`/`playerTwoRoster`
- * are always real arrays, never `undefined`.
- */
-function normalizeDraftState(raw: unknown): DraftState | null {
+function historyPath(week: number): string {
+  return `${ROOT}/history/week-${week}`
+}
+
+/** The Realtime Database drops empty arrays on write, so a freshly-created draft's `[]` pick
+ * lists read back as `undefined`, not `[]`. Every LiveDraft coming out of a snapshot goes through
+ * this so the rest of the app can keep assuming the pick arrays are always real arrays. */
+function normalizeLiveDraft(raw: unknown): LiveDraft | null {
   if (!raw || typeof raw !== 'object') return null
-  const value = raw as Partial<DraftState>
+  const value = raw as Partial<LiveDraft>
   return {
-    availablePlayers: value.availablePlayers ?? [],
-    playerOneRoster: value.playerOneRoster ?? [],
-    playerTwoRoster: value.playerTwoRoster ?? [],
-    currentTurn: value.currentTurn === 2 ? 2 : 1,
-    error: value.error ?? null,
-    weekNumber: value.weekNumber ?? 1,
-    weekId: value.weekId ?? '',
+    status: value.status === 'complete' ? 'complete' : 'in-progress',
+    currentTurn: value.currentTurn === 'player2' ? 'player2' : 'player1',
+    player1Picks: value.player1Picks ?? [],
+    player2Picks: value.player2Picks ?? [],
   }
 }
 
-// ---- Live draft state ------------------------------------------------------
-
-/** Overwrites the live draft state for a week. Every subscribed device sees this instantly. */
-export async function saveDraft(weekId: string, state: DraftState): Promise<void> {
-  await set(ref(getFirebaseDatabase(), draftPath(weekId)), state)
+function normalizeOrganizedRoster(raw: unknown): OrganizedRoster | null {
+  if (!raw || typeof raw !== 'object') return null
+  const value = raw as Partial<OrganizedRoster>
+  return {
+    QB: value.QB ?? null,
+    RB: value.RB ?? [],
+    WR: value.WR ?? [],
+    TE: value.TE ?? [],
+    FLEX: value.FLEX ?? [],
+    K: value.K ?? null,
+    DEF: value.DEF ?? null,
+  }
 }
 
-/** One-time read of a week's draft state (e.g. before a real-time listener attaches). */
-export async function loadDraft(weekId: string): Promise<DraftState | null> {
-  const snapshot = await get(ref(getFirebaseDatabase(), draftPath(weekId)))
-  return normalizeDraftState(snapshot.val())
+// ---- Live draft -------------------------------------------------------------
+
+/** Plain overwrite of a week's draft. For concurrency-safe pick submission use submitDraftPick. */
+export async function saveDraft(week: number, draftData: LiveDraft): Promise<void> {
+  await set(ref(getFirebaseDatabase(), draftPath(week)), draftData)
+}
+
+/** One-time read of a week's draft (e.g. before a real-time listener attaches). */
+export async function loadDraft(week: number): Promise<LiveDraft | null> {
+  const snapshot = await get(ref(getFirebaseDatabase(), draftPath(week)))
+  return normalizeLiveDraft(snapshot.val())
 }
 
 /** Subscribes to real-time updates for a week's draft. Call the returned function to unsubscribe. */
-export function subscribeToDraft(weekId: string, onChange: (state: DraftState | null) => void): Unsubscribe {
-  return onValue(ref(getFirebaseDatabase(), draftPath(weekId)), (snapshot) => {
-    onChange(normalizeDraftState(snapshot.val()))
+export function subscribeToDraft(week: number, onChange: (draft: LiveDraft | null) => void): Unsubscribe {
+  return onValue(ref(getFirebaseDatabase(), draftPath(week)), (snapshot) => {
+    onChange(normalizeLiveDraft(snapshot.val()))
   })
 }
 
-/**
- * Creates the week's draft node if it doesn't exist yet. Safe to call from every device on
- * mount: Firebase transactions guarantee only one of them actually initializes it, so two
- * players opening the app at the same moment never race each other into two different pools.
- */
-export async function ensureDraftInitialized(
-  weekId: string,
-  players: Player[],
-  weekNumber: number,
-): Promise<DraftState> {
-  const result = await runTransaction(ref(getFirebaseDatabase(), draftPath(weekId)), (current: unknown) => {
-    return normalizeDraftState(current) ?? createInitialDraftState(players, weekId, weekNumber)
+/** Creates the week's draft node if it doesn't exist yet. Safe to call from every device. */
+export async function ensureDraftInitialized(week: number): Promise<LiveDraft> {
+  const result = await runTransaction(ref(getFirebaseDatabase(), draftPath(week)), (current: unknown) => {
+    return normalizeLiveDraft(current) ?? createLiveDraft()
   })
-  return normalizeDraftState(result.snapshot.val()) as DraftState
+  return normalizeLiveDraft(result.snapshot.val()) as LiveDraft
 }
 
 /**
- * Applies a draft action (a pick, a turn-clear, etc.) via a Realtime Database transaction: the
- * server re-runs `draftReducer` against whatever the *latest* committed state is if two devices
- * write at nearly the same instant, so two players can never both draft the same player.
+ * Conflict-safe pick submission: re-validates inside a Realtime Database transaction against
+ * whatever the *latest* committed draft is, so two devices racing to draft at the same instant
+ * can never both succeed on the same player. saveDraft's plain overwrite isn't safe for this -
+ * that's what this function is for.
  */
-export async function applyDraftAction(weekId: string, action: DraftAction): Promise<DraftState> {
-  const result = await runTransaction(ref(getFirebaseDatabase(), draftPath(weekId)), (current: unknown) => {
-    const state = normalizeDraftState(current)
-    if (!state) return current
-    return draftReducer(state, action)
+export async function submitDraftPick(
+  week: number,
+  slot: PlayerSlot,
+  playerId: string,
+  playersById: Map<string, Player>,
+): Promise<{ ok: true; draft: LiveDraft } | { ok: false; reason: string }> {
+  let reason: string | null = null
+
+  const result = await runTransaction(ref(getFirebaseDatabase(), draftPath(week)), (current: unknown) => {
+    reason = null // reset each time in case Firebase retries this updater under contention
+    const draft = normalizeLiveDraft(current)
+    if (!draft) {
+      reason = 'Draft has not been initialized for this week yet.'
+      return current
+    }
+    const validation = validatePick(draft, slot, playerId, playersById)
+    if (!validation.ok) {
+      reason = validation.reason ?? 'Invalid pick.'
+      return undefined // abort the transaction: nothing is written
+    }
+    return applyPick(draft, slot, playerId)
   })
-  const normalized = normalizeDraftState(result.snapshot.val())
-  if (!result.committed || !normalized) {
-    throw new Error('Draft has not been initialized for this week yet.')
-  }
-  return normalized
+
+  if (reason) return { ok: false, reason }
+  if (!result.committed) return { ok: false, reason: 'Pick was rejected by a concurrent update. Try again.' }
+  return { ok: true, draft: normalizeLiveDraft(result.snapshot.val()) as LiveDraft }
+}
+
+// ---- Rosters (organized by lineup slot) ------------------------------------
+
+/** `playerId` here is the league slot ("player1"/"player2"), not a Sleeper player id. */
+export async function saveRoster(week: number, playerId: PlayerSlot, roster: OrganizedRoster): Promise<void> {
+  await set(ref(getFirebaseDatabase(), rosterPath(week, playerId)), roster)
+}
+
+export async function loadRoster(week: number, playerId: PlayerSlot): Promise<OrganizedRoster | null> {
+  const snapshot = await get(ref(getFirebaseDatabase(), rosterPath(week, playerId)))
+  return normalizeOrganizedRoster(snapshot.val())
 }
 
 // ---- League history ---------------------------------------------------------
 
-export interface DraftHistoryEntry {
-  weekId: string
-  weekNumber: number
-  playerOneRoster: Player[]
-  playerTwoRoster: Player[]
-  playerOneScore: number
-  playerTwoScore: number
+export interface PlayerHistoryLine {
+  playerId: string
+  name: string
+  position: Position
+  points: number
+}
+
+export interface WeekHistoryEntry {
+  week: number
+  player1Score: number
+  player2Score: number
+  winner: PlayerSlot | 'tie'
+  player1Roster: PlayerHistoryLine[]
+  player2Roster: PlayerHistoryLine[]
   completedAt: number
 }
 
-export async function saveDraftHistory(weekId: string, entry: DraftHistoryEntry): Promise<void> {
-  await set(ref(getFirebaseDatabase(), historyPath(weekId)), entry)
+export async function saveDraftHistory(week: number, results: WeekHistoryEntry): Promise<void> {
+  await set(ref(getFirebaseDatabase(), historyPath(week)), results)
 }
 
-export async function loadDraftHistory(weekId: string): Promise<DraftHistoryEntry | null> {
-  const snapshot = await get(ref(getFirebaseDatabase(), historyPath(weekId)))
-  return snapshot.exists() ? (snapshot.val() as DraftHistoryEntry) : null
+export async function loadDraftHistorySingleWeek(week: number): Promise<WeekHistoryEntry | null> {
+  const snapshot = await get(ref(getFirebaseDatabase(), historyPath(week)))
+  return (snapshot.val() as WeekHistoryEntry | null) ?? null
 }
 
-/** Every completed week on record, most recent first. */
-export async function loadAllDraftHistory(): Promise<DraftHistoryEntry[]> {
-  const snapshot = await get(ref(getFirebaseDatabase(), 'leagueHistory'))
+/** Every completed week on record, sorted oldest first (the "reflect on the year" view). */
+export async function loadDraftHistory(): Promise<WeekHistoryEntry[]> {
+  const snapshot = await get(ref(getFirebaseDatabase(), `${ROOT}/history`))
   if (!snapshot.exists()) return []
-  const value = snapshot.val() as Record<string, DraftHistoryEntry>
-  return Object.values(value).sort((a, b) => b.completedAt - a.completedAt)
+  const value = snapshot.val() as Record<string, WeekHistoryEntry>
+  return Object.values(value).sort((a, b) => a.week - b.week)
 }
 
-// ---- Users --------------------------------------------------------------
-
-export async function touchUser(uid: string): Promise<void> {
-  await update(ref(getFirebaseDatabase(), `users/${uid}`), { lastSeenAt: Date.now() })
+export interface SeasonRecord {
+  player1: { wins: number; losses: number; ties: number }
+  player2: { wins: number; losses: number; ties: number }
 }
 
-// ---- Sleeper player cache -------------------------------------------------
+/** Derived from history rather than a separately-maintained counter, so it can never drift out of sync. */
+export async function getSeasonRecord(): Promise<SeasonRecord> {
+  const history = await loadDraftHistory()
+  const record: SeasonRecord = {
+    player1: { wins: 0, losses: 0, ties: 0 },
+    player2: { wins: 0, losses: 0, ties: 0 },
+  }
+  for (const entry of history) {
+    if (entry.winner === 'player1') {
+      record.player1.wins += 1
+      record.player2.losses += 1
+    } else if (entry.winner === 'player2') {
+      record.player2.wins += 1
+      record.player1.losses += 1
+    } else {
+      record.player1.ties += 1
+      record.player2.ties += 1
+    }
+  }
+  return record
+}
+
+// ---- Active week / weekly reset clock --------------------------------------
+
+/**
+ * Checks whether the Tuesday-midnight boundary has passed since the stored nextResetDate, and if
+ * so advances activeWeek (by more than 1 if the app wasn't opened for several weeks) and
+ * initializes that new week's draft node. Safe to call from every device — activeWeek and
+ * nextResetDate are each updated via their own small transaction.
+ */
+export async function updateActiveWeek(): Promise<number> {
+  const db = getFirebaseDatabase()
+  const now = Date.now()
+
+  const existing = await get(ref(db, `${ROOT}/nextResetDate`))
+  if (!existing.exists()) {
+    // First time this league has ever run: bootstrap week 1. Transactions guard both fields so
+    // two devices loading the app for the first time at once can't disagree on the start point.
+    await runTransaction(ref(db, `${ROOT}/nextResetDate`), (current: number | null) => {
+      return current ?? getNextWeeklyResetDate(new Date(now)).getTime()
+    })
+    await runTransaction(ref(db, `${ROOT}/activeWeek`), (current: number | null) => current ?? 1)
+    await ensureDraftInitialized(1)
+    return 1
+  }
+
+  let weeksElapsed = 0
+  await runTransaction(ref(db, `${ROOT}/nextResetDate`), (current: number | null) => {
+    weeksElapsed = 0
+    if (current == null) return current
+    let next = current
+    while (now >= next) {
+      next += ONE_WEEK_MS
+      weeksElapsed += 1
+    }
+    return weeksElapsed > 0 ? next : current
+  })
+
+  if (weeksElapsed === 0) {
+    const weekSnap = await get(ref(db, `${ROOT}/activeWeek`))
+    return weekSnap.exists() ? (weekSnap.val() as number) : 1
+  }
+
+  const weekResult = await runTransaction(ref(db, `${ROOT}/activeWeek`), (current: number | null) => {
+    return (current ?? 1) + weeksElapsed
+  })
+  const week = weekResult.snapshot.val() as number
+  await ensureDraftInitialized(week)
+  return week
+}
+
+/** The week currently live for drafting, rolling the league forward first if a reset is due. */
+export async function getCurrentWeek(): Promise<number> {
+  return updateActiveWeek()
+}
+
+// ---- Sleeper player cache ---------------------------------------------------
 
 export interface PlayersCache {
   players: Player[]

@@ -1,15 +1,37 @@
 import { createContext, useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
 import type { Player } from '../types/player'
 import { ensureAnonymousAuth } from '../config/firebase'
-import { applyDraftAction, ensureDraftInitialized, subscribeToDraft } from '../utils/firebase'
-import { getNextWeeklyResetDate, getWeekId } from '../utils/season'
-import { isDraftComplete as computeIsDraftComplete, type DraftState, type Turn } from './draftReducer'
+import {
+  ensureDraftInitialized,
+  getCurrentWeek,
+  saveRoster,
+  subscribeToDraft,
+  submitDraftPick,
+} from '../utils/firebase'
+import { isDraftComplete as computeIsDraftComplete, resolveRoster, type LiveDraft, type PlayerSlot } from './draftLogic'
+import { organizeRosterByPosition } from './rosterRules'
+import { getNextWeeklyResetDate } from '../utils/season'
 
-export type { DraftState, Turn } from './draftReducer'
-export { isDraftComplete } from './draftReducer'
+export type Turn = 1 | 2
 export { ROSTER_SIZE } from './rosterRules'
 
-export interface DraftContextValue extends DraftState {
+function turnToSlot(turn: Turn): PlayerSlot {
+  return turn === 1 ? 'player1' : 'player2'
+}
+
+function slotToTurn(slot: PlayerSlot): Turn {
+  return slot === 'player1' ? 1 : 2
+}
+
+export interface DraftContextValue {
+  availablePlayers: Player[]
+  playerOneRoster: Player[]
+  playerTwoRoster: Player[]
+  currentTurn: Turn
+  /** A rejected pick's reason (validation-only; never synced to Firebase, so it's local to this device). */
+  error: string | null
+  /** This league's own active-week counter (ff-league/activeWeek) — Tuesday-anchored, distinct from Sleeper's NFL week. */
+  weekNumber: number
   isDraftComplete: boolean
   /** Whether this device is currently subscribed to live updates from Firebase. */
   isConnected: boolean
@@ -26,33 +48,34 @@ export interface DraftProviderProps {
   children: ReactNode
   /** The current season's player pool (from useSleeperPlayers). */
   players: Player[]
-  /** The current NFL week (from useSleeperPlayers) — becomes this draft's weekNumber. */
-  weekNumber: number
 }
 
-export function DraftProvider({ children, players, weekNumber }: DraftProviderProps) {
-  const [weekId, setWeekId] = useState(() => getWeekId())
-  const [state, setState] = useState<DraftState | null>(null)
+export function DraftProvider({ children, players }: DraftProviderProps) {
+  const playersById = useMemo(() => new Map(players.map((p) => [p.id, p])), [players])
+
+  const [week, setWeek] = useState<number | null>(null)
+  const [draft, setDraft] = useState<LiveDraft | null>(null)
+  const [error, setError] = useState<string | null>(null)
   const [connectionError, setConnectionError] = useState<string | null>(null)
 
-  // Connect to (and, if necessary, initialize) this week's draft node, and subscribe to live
-  // updates from every device. Firebase transactions inside ensureDraftInitialized/applyDraftAction
-  // make this safe even if two devices race to set up or pick at the same instant.
+  // Authenticate, determine (and roll over, if due) the active week, then subscribe to it live.
   useEffect(() => {
     if (players.length === 0) return
     let cancelled = false
     let unsubscribe: (() => void) | undefined
 
-    setState(null)
+    setDraft(null)
     setConnectionError(null)
 
     async function connect() {
       try {
         await ensureAnonymousAuth()
-        await ensureDraftInitialized(weekId, players, weekNumber)
+        const currentWeek = await getCurrentWeek()
+        await ensureDraftInitialized(currentWeek)
         if (cancelled) return
-        unsubscribe = subscribeToDraft(weekId, (remote) => {
-          if (!cancelled) setState(remote)
+        setWeek(currentWeek)
+        unsubscribe = subscribeToDraft(currentWeek, (remote) => {
+          if (!cancelled) setDraft(remote)
         })
       } catch (err) {
         if (!cancelled) {
@@ -66,55 +89,80 @@ export function DraftProvider({ children, players, weekNumber }: DraftProviderPr
       cancelled = true
       unsubscribe?.()
     }
-  }, [weekId, players, weekNumber])
+  }, [players])
 
-  // Roll `weekId` forward once the Tuesday-midnight boundary passes. The effect above reacts to
-  // that change by connecting to (and initializing) the new week's draft node.
+  // While the tab stays open, check again right at the next Tuesday-midnight boundary; if the
+  // active week actually moved, the effect above reconnects to the new one.
   useEffect(() => {
     const msUntilNextReset = getNextWeeklyResetDate().getTime() - Date.now()
-    const timer = setTimeout(() => {
-      const currentWeekId = getWeekId()
-      setWeekId((prev) => (currentWeekId !== prev ? currentWeekId : prev))
+    const timer = setTimeout(async () => {
+      const currentWeek = await getCurrentWeek().catch(() => null)
+      if (currentWeek != null) setWeek((prev) => (prev !== currentWeek ? currentWeek : prev))
     }, msUntilNextReset + 250)
     return () => clearTimeout(timer)
-  }, [weekId])
+  }, [week])
+
+  // Keep rosters/week-{n}/player1|player2 (grouped by lineup slot) in sync with the live picks,
+  // so that Firebase location stays meaningful without the app having to remember to call
+  // saveRoster explicitly every time a pick happens.
+  useEffect(() => {
+    if (!draft || week == null) return
+    saveRoster(week, 'player1', organizeRosterByPosition(resolveRoster(draft.player1Picks, playersById))).catch(
+      () => {},
+    )
+    saveRoster(week, 'player2', organizeRosterByPosition(resolveRoster(draft.player2Picks, playersById))).catch(
+      () => {},
+    )
+  }, [draft, week, playersById])
 
   const selectPlayer = useCallback(
     (playerId: string, asPlayer?: Turn) => {
-      applyDraftAction(weekId, { type: 'SELECT_PLAYER', playerId, asPlayer }).catch((err) => {
-        setConnectionError(err instanceof Error ? err.message : 'Failed to sync pick.')
-      })
+      if (week == null) return
+      const slot = asPlayer !== undefined ? turnToSlot(asPlayer) : (draft?.currentTurn ?? 'player1')
+      submitDraftPick(week, slot, playerId, playersById)
+        .then((result) => setError(result.ok ? null : result.reason))
+        .catch((err) => {
+          setConnectionError(err instanceof Error ? err.message : 'Failed to sync pick.')
+        })
     },
-    [weekId],
+    [week, draft, playersById],
   )
 
-  const clearError = useCallback(() => {
-    applyDraftAction(weekId, { type: 'CLEAR_ERROR' }).catch(() => {})
-  }, [weekId])
+  const clearError = useCallback(() => setError(null), [])
 
   const value = useMemo<DraftContextValue>(() => {
     const shared = {
-      isConnected: state !== null,
+      error,
+      isConnected: draft !== null,
       connectionError,
       nextResetAt: getNextWeeklyResetDate(),
       selectPlayer,
       clearError,
     }
-    if (!state) {
+
+    if (!draft || week == null) {
       return {
         availablePlayers: [],
         playerOneRoster: [],
         playerTwoRoster: [],
         currentTurn: 1,
-        error: null,
-        weekNumber,
-        weekId,
+        weekNumber: week ?? 1,
         isDraftComplete: false,
         ...shared,
       }
     }
-    return { ...state, isDraftComplete: computeIsDraftComplete(state), ...shared }
-  }, [state, weekId, weekNumber, connectionError, selectPlayer, clearError])
+
+    const draftedIds = new Set([...draft.player1Picks, ...draft.player2Picks])
+    return {
+      availablePlayers: players.filter((p) => !draftedIds.has(p.id)),
+      playerOneRoster: resolveRoster(draft.player1Picks, playersById),
+      playerTwoRoster: resolveRoster(draft.player2Picks, playersById),
+      currentTurn: slotToTurn(draft.currentTurn),
+      weekNumber: week,
+      isDraftComplete: computeIsDraftComplete(draft),
+      ...shared,
+    }
+  }, [draft, week, players, playersById, error, connectionError, selectPlayer, clearError])
 
   return <DraftContext.Provider value={value}>{children}</DraftContext.Provider>
 }

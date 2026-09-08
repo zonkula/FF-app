@@ -20,7 +20,7 @@ function App() {
         <p className="p-8 text-center text-sm text-gray-400">Loading players from Sleeper...</p>
       ) : (
         <ErrorBoundary>
-          <DraftProvider players={players} weekNumber={week}>
+          <DraftProvider players={players}>
             <DraftBoard season={season} week={week} />
           </DraftProvider>
         </ErrorBoundary>

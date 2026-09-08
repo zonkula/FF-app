@@ -58,3 +58,35 @@ export function describeNoSlotError(position: Position): string {
     ? `No open ${position} or FLEX slot left on that roster.`
     : `No open ${position} slot left on that roster.`
 }
+
+/** A completed roster grouped by lineup slot, matching how it's stored under `rosters/week-N/`. */
+export interface OrganizedRoster {
+  QB: Player | null
+  RB: Player[]
+  WR: Player[]
+  TE: Player[]
+  FLEX: Player[]
+  K: Player | null
+  DEF: Player | null
+}
+
+/** Groups a flat, ordered pick list into lineup slots using the same greedy fill as getSlotUsage. */
+export function organizeRosterByPosition(roster: Player[]): OrganizedRoster {
+  const result: OrganizedRoster = { QB: null, RB: [], WR: [], TE: [], FLEX: [], K: null, DEF: null }
+  const slotsUsed: Record<Position, number> = { QB: 0, RB: 0, WR: 0, TE: 0, K: 0, DEF: 0 }
+
+  for (const player of roster) {
+    const position = player.position
+    if (slotsUsed[position] < ROSTER_REQUIREMENTS[position]) {
+      slotsUsed[position] += 1
+      if (position === 'QB') result.QB = player
+      else if (position === 'K') result.K = player
+      else if (position === 'DEF') result.DEF = player
+      else result[position].push(player)
+    } else if (isFlexEligible(position) && result.FLEX.length < FLEX_SLOTS) {
+      result.FLEX.push(player)
+    }
+  }
+
+  return result
+}

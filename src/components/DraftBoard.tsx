@@ -1,9 +1,10 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { Player } from '../types/player'
 import { useDraft } from '../hooks/useDraft'
 import { useWeeklyScores } from '../hooks/useWeeklyScores'
+import { useSeasonRecord } from '../hooks/useSeasonRecord'
 import { canDraftPosition } from '../context/rosterRules'
-import { saveDraftHistory } from '../utils/firebase'
+import { saveDraftHistory, type PlayerHistoryLine } from '../utils/firebase'
 import { TurnIndicator } from './TurnIndicator'
 import { RosterPreview } from './RosterPreview'
 import { PlayerPool } from './PlayerPool'
@@ -30,7 +31,6 @@ export function DraftBoard({ season, week }: DraftBoardProps) {
     playerTwoRoster,
     currentTurn,
     error,
-    weekId,
     weekNumber,
     nextResetAt,
     isDraftComplete,
@@ -39,6 +39,9 @@ export function DraftBoard({ season, week }: DraftBoardProps) {
     selectPlayer,
     clearError,
   } = useDraft()
+
+  const [historyVersion, setHistoryVersion] = useState(0)
+  const seasonRecord = useSeasonRecord(historyVersion)
 
   const handleDraft = (playerId: string) => selectPlayer(playerId, currentTurn)
   const currentRoster = currentTurn === 1 ? playerOneRoster : playerTwoRoster
@@ -59,6 +62,12 @@ export function DraftBoard({ season, week }: DraftBoardProps) {
     <div className="mx-auto max-w-5xl space-y-4 p-4">
       <div className="flex flex-col gap-1 text-xs text-gray-400 sm:flex-row sm:justify-between">
         <span>Week {weekNumber}</span>
+        <span>
+          Season record: Player 1 {seasonRecord.player1.wins}-{seasonRecord.player1.losses}
+          {seasonRecord.player1.ties > 0 ? `-${seasonRecord.player1.ties}` : ''} · Player 2{' '}
+          {seasonRecord.player2.wins}-{seasonRecord.player2.losses}
+          {seasonRecord.player2.ties > 0 ? `-${seasonRecord.player2.ties}` : ''}
+        </span>
         <span>Next reset: {formatResetTime(nextResetAt)}</span>
       </div>
 
@@ -73,12 +82,12 @@ export function DraftBoard({ season, week }: DraftBoardProps) {
 
       {isDraftComplete ? (
         <DraftCompleteSummary
-          weekId={weekId}
           weekNumber={weekNumber}
           season={season}
           week={week}
           playerOneRoster={playerOneRoster}
           playerTwoRoster={playerTwoRoster}
+          onHistorySaved={() => setHistoryVersion((v) => v + 1)}
         />
       ) : (
         <>
@@ -101,21 +110,30 @@ export function DraftBoard({ season, week }: DraftBoardProps) {
 }
 
 interface DraftCompleteSummaryProps {
-  weekId: string
   weekNumber: number
   season: string | null
   week: number | null
   playerOneRoster: Player[]
   playerTwoRoster: Player[]
+  onHistorySaved: () => void
+}
+
+function toHistoryLines(roster: Player[], scores: Record<string, number>): PlayerHistoryLine[] {
+  return roster.map((player) => ({
+    playerId: player.id,
+    name: player.name,
+    position: player.position,
+    points: scores[player.id] ?? 0,
+  }))
 }
 
 function DraftCompleteSummary({
-  weekId,
   weekNumber,
   season,
   week,
   playerOneRoster,
   playerTwoRoster,
+  onHistorySaved,
 }: DraftCompleteSummaryProps) {
   const { scores, loading: scoresLoading } = useWeeklyScores(season, week)
   const gamesReported = Object.keys(scores).length > 0
@@ -123,22 +141,24 @@ function DraftCompleteSummary({
   const p1Total = playerOneRoster.reduce((sum, p) => sum + (scores[p.id] ?? 0), 0)
   const p2Total = playerTwoRoster.reduce((sum, p) => sum + (scores[p.id] ?? 0), 0)
 
-  const historySavedFor = useRef<string | null>(null)
+  const historySavedForWeek = useRef<number | null>(null)
   useEffect(() => {
-    if (scoresLoading || historySavedFor.current === weekId) return
-    historySavedFor.current = weekId
-    saveDraftHistory(weekId, {
-      weekId,
-      weekNumber,
-      playerOneRoster,
-      playerTwoRoster,
-      playerOneScore: p1Total,
-      playerTwoScore: p2Total,
+    if (scoresLoading || historySavedForWeek.current === weekNumber) return
+    historySavedForWeek.current = weekNumber
+    saveDraftHistory(weekNumber, {
+      week: weekNumber,
+      player1Score: p1Total,
+      player2Score: p2Total,
+      winner: p1Total === p2Total ? 'tie' : p1Total > p2Total ? 'player1' : 'player2',
+      player1Roster: toHistoryLines(playerOneRoster, scores),
+      player2Roster: toHistoryLines(playerTwoRoster, scores),
       completedAt: Date.now(),
-    }).catch(() => {})
+    })
+      .then(onHistorySaved)
+      .catch(() => {})
     // Intentionally only re-runs when the completed week changes, not on every score refetch.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [weekId, scoresLoading])
+  }, [weekNumber, scoresLoading])
 
   return (
     <div className="space-y-4">

@@ -83,15 +83,20 @@ export async function fetchAllPlayers(season: string): Promise<Player[]> {
 
   const players: Player[] = []
   for (const p of Object.values(raw)) {
-    if (!p.team || !p.active || p.status !== 'Active' || p.search_rank == null) continue
+    if (!p.team || !p.active) continue
     if (!FANTASY_POSITIONS.includes(p.position as Position)) continue
+
+    // Team defenses are minimal records with no `status`/`search_rank` at all (unlike individual
+    // players) - the "is this an active, real player" checks below don't apply to them.
+    const isTeamDefense = p.position === 'DEF'
+    if (!isTeamDefense && (p.status !== 'Active' || p.search_rank == null)) continue
 
     players.push({
       id: p.player_id,
       name: p.full_name ?? `${p.first_name ?? ''} ${p.last_name ?? ''}`.trim(),
       position: p.position as Position,
       nflTeam: p.team,
-      adp: p.search_rank,
+      adp: p.search_rank ?? 9999,
       byeWeek: byeWeeks[p.team] ?? 0,
       pprPoints: 0,
     })

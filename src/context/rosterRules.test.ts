@@ -5,6 +5,7 @@ import {
   describeNoSlotError,
   FLEX_SLOTS,
   getSlotUsage,
+  organizeRosterByPosition,
   ROSTER_REQUIREMENTS,
   ROSTER_SIZE,
 } from './rosterRules'
@@ -62,6 +63,49 @@ describe('canDraftPosition', () => {
 
   it('rejects a non-FLEX-eligible position once its single dedicated slot is full', () => {
     expect(canDraftPosition([player('QB', 1)], 'QB')).toBe(false)
+  })
+})
+
+describe('organizeRosterByPosition', () => {
+  it('places each dedicated position in its own slot', () => {
+    const roster = [
+      player('QB', 1),
+      player('RB', 1),
+      player('RB', 2),
+      player('RB', 3),
+      player('WR', 1),
+      player('WR', 2),
+      player('WR', 3),
+      player('TE', 1),
+      player('TE', 2),
+      player('K', 1),
+      player('DEF', 1),
+    ]
+    const organized = organizeRosterByPosition(roster)
+    expect(organized.QB?.id).toBe('QB-1')
+    expect(organized.RB.map((p) => p.id)).toEqual(['RB-1', 'RB-2', 'RB-3'])
+    expect(organized.WR.map((p) => p.id)).toEqual(['WR-1', 'WR-2', 'WR-3'])
+    expect(organized.TE.map((p) => p.id)).toEqual(['TE-1', 'TE-2'])
+    expect(organized.K?.id).toBe('K-1')
+    expect(organized.DEF?.id).toBe('DEF-1')
+    expect(organized.FLEX).toEqual([])
+  })
+
+  it('spills extra RB/WR/TE picks into FLEX once their dedicated slots are full', () => {
+    const roster = [
+      player('RB', 1),
+      player('RB', 2),
+      player('RB', 3),
+      player('RB', 4), // -> FLEX
+      player('WR', 1),
+      player('WR', 2),
+      player('WR', 3),
+      player('WR', 4), // -> FLEX
+    ]
+    const organized = organizeRosterByPosition(roster)
+    expect(organized.RB.map((p) => p.id)).toEqual(['RB-1', 'RB-2', 'RB-3'])
+    expect(organized.WR.map((p) => p.id)).toEqual(['WR-1', 'WR-2', 'WR-3'])
+    expect(organized.FLEX.map((p) => p.id)).toEqual(['RB-4', 'WR-4'])
   })
 })
 

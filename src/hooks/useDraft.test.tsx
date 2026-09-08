@@ -48,11 +48,7 @@ function makePlayers(n: number): Player[] {
 
 function wrapperFor(players: Player[]) {
   return function Wrapper({ children }: { children: ReactNode }) {
-    return (
-      <DraftProvider players={players} weekNumber={1}>
-        {children}
-      </DraftProvider>
-    )
+    return <DraftProvider players={players}>{children}</DraftProvider>
   }
 }
 
