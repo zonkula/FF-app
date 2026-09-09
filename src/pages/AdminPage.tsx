@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useAdminAuth } from '../context/AdminAuthContext'
+import { ensureAnonymousAuth } from '../config/firebase'
 import {
   clearAllHistory,
   initializeNewDraftWeek,
@@ -75,6 +76,7 @@ function AdminDashboard() {
   const [confirmingResetSeason, setConfirmingResetSeason] = useState(false)
 
   const refresh = useCallback(async () => {
+    await ensureAnonymousAuth()
     const [nextMeta, nextSnapshot] = await Promise.all([loadLeagueMeta(), loadLeagueSnapshot()])
     setMeta(nextMeta)
     setSnapshot(nextSnapshot)
@@ -88,6 +90,7 @@ function AdminDashboard() {
     setBusy(true)
     setStatus(label)
     try {
+      await ensureAnonymousAuth()
       await action()
       await refresh()
       setStatus(`${label} — done.`)
