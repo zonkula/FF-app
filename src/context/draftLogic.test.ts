@@ -19,7 +19,6 @@ function makePlayer(n: number, position: Position = 'RB'): Player {
     adp: n,
     byeWeek: 1,
     pprPoints: 100 - n,
-    espnId: null,
   }
 }
 

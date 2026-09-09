@@ -20,7 +20,6 @@ interface DisplayLine {
   name: string
   position: Position
   nflTeam: string
-  espnId: string | null
   actual: number | null
   projected: number | null
 }
@@ -31,7 +30,6 @@ function toDisplayLines(roster: Player[], scores: WeeklyPoints, projections: Wee
     name: p.name,
     position: p.position,
     nflTeam: p.nflTeam,
-    espnId: p.espnId,
     actual: scores[p.id] ?? null,
     projected: projections[p.id] ?? null,
   }))
@@ -43,7 +41,6 @@ function historyToDisplayLines(lines: PlayerHistoryLine[]): DisplayLine[] {
     name: line.name,
     position: line.position,
     nflTeam: line.nflTeam,
-    espnId: line.espnId ?? null,
     actual: line.points,
     projected: null,
   }))

@@ -3,7 +3,7 @@ import type { Player } from '../types/player'
 import { POSITION_BADGE_BG } from '../utils/positionColors'
 
 /** What an avatar needs to render - a subset of Player so view-model objects (e.g. saved history lines) can use it too, not just live Player records. */
-type AvatarPlayer = Pick<Player, 'name' | 'position' | 'nflTeam' | 'espnId'>
+type AvatarPlayer = Pick<Player, 'id' | 'name' | 'position' | 'nflTeam'>
 
 const SIZE_CLASSES = {
   sm: 'h-10 w-10 text-xs',
@@ -24,20 +24,31 @@ function initialsFor(player: AvatarPlayer): string {
   return (first + last).toUpperCase()
 }
 
-/** ESPN headshot with an initials-in-position-color fallback for missing/broken images. */
+/**
+ * Sleeper's own CDN, keyed directly by the same player_id Sleeper already gives every player - no
+ * lossy id mapping (unlike ESPN's separate espn_id, which only ~30% of players have). Team
+ * defenses aren't real "players" there, so they get the team's logo instead.
+ */
+function photoUrlFor(player: AvatarPlayer): string {
+  if (player.position === 'DEF') {
+    return `https://sleepercdn.com/images/team_logos/nfl/${player.nflTeam.toLowerCase()}.png`
+  }
+  return `https://sleepercdn.com/content/nfl/players/${player.id}.jpg`
+}
+
+/** Sleeper-hosted headshot (team logo for defenses) with an initials-in-position-color fallback for the rare miss. */
 export function PlayerAvatar({ player, size = 'sm' }: PlayerAvatarProps) {
   const [failed, setFailed] = useState(false)
-  const showPhoto = Boolean(player.espnId) && !failed
 
   return (
     <div
       className={`flex shrink-0 items-center justify-center overflow-hidden rounded-full border-2 border-sky-500 shadow-md shadow-blue-500/20 ${SIZE_CLASSES[size]}`}
     >
-      {showPhoto ? (
+      {!failed ? (
         <img
-          src={`https://a.espncdn.com/i/headshots/nfl/players/full/${player.espnId}.png`}
+          src={photoUrlFor(player)}
           alt={player.name}
-          className="h-full w-full object-cover"
+          className={`h-full w-full ${player.position === 'DEF' ? 'object-contain p-1' : 'object-cover'}`}
           onError={() => setFailed(true)}
         />
       ) : (

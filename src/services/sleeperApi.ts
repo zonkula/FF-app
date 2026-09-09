@@ -13,7 +13,6 @@ interface SleeperPlayerRaw {
   active?: boolean
   status?: string
   search_rank?: number | null
-  espn_id?: number | string | null
 }
 
 interface SleeperGame {
@@ -100,7 +99,6 @@ export async function fetchAllPlayers(season: string): Promise<Player[]> {
       adp: p.search_rank ?? 9999,
       byeWeek: byeWeeks[p.team] ?? 0,
       pprPoints: 0,
-      espnId: p.espn_id != null ? String(p.espn_id) : null,
     })
   }
 

@@ -44,7 +44,6 @@ function makePlayers(n: number): Player[] {
     adp: i + 1,
     byeWeek: 1,
     pprPoints: 100,
-    espnId: null,
   }))
 }
 
@@ -146,14 +145,13 @@ describe('useDraft (Firebase-backed)', () => {
             adp: n,
             byeWeek: 1,
             pprPoints: 0,
-            espnId: null,
           })
           n++
         }
       }
       // A few spare players for waiver adds: an extra RB and an extra QB.
-      players.push({ id: 'waiver-rb', name: 'Waiver RB', position: 'RB', nflTeam: 'AAA', adp: 999, byeWeek: 1, pprPoints: 0, espnId: null })
-      players.push({ id: 'waiver-qb', name: 'Waiver QB', position: 'QB', nflTeam: 'AAA', adp: 999, byeWeek: 1, pprPoints: 0, espnId: null })
+      players.push({ id: 'waiver-rb', name: 'Waiver RB', position: 'RB', nflTeam: 'AAA', adp: 999, byeWeek: 1, pprPoints: 0 })
+      players.push({ id: 'waiver-qb', name: 'Waiver QB', position: 'QB', nflTeam: 'AAA', adp: 999, byeWeek: 1, pprPoints: 0 })
       return players
     }
 

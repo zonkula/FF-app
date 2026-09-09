@@ -149,7 +149,6 @@ function toHistoryLines(roster: Player[], scores: Record<string, number>): Playe
     position: player.position,
     points: scores[player.id] ?? 0,
     nflTeam: player.nflTeam,
-    espnId: player.espnId,
   }))
 }
 

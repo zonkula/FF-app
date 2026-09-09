@@ -4,7 +4,7 @@ import { createLiveDraft, type LiveDraft } from './draftLogic'
 import { applyWaiverMove, validateWaiverMove } from './waiverLogic'
 
 function makePlayer(id: string, position: Position): Player {
-  return { id, name: id, position, nflTeam: 'AAA', adp: 1, byeWeek: 1, pprPoints: 0, espnId: null }
+  return { id, name: id, position, nflTeam: 'AAA', adp: 1, byeWeek: 1, pprPoints: 0 }
 }
 
 function byId(players: Player[]): Map<string, Player> {
