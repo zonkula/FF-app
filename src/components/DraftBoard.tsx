@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { Player } from '../types/player'
 import { useDraft } from '../hooks/useDraft'
 import { useAuth } from '../hooks/useAuth'
@@ -44,9 +44,16 @@ export function DraftBoard() {
   const myTurn = turnForPlayerName(user!)
   const isMyTurn = currentTurn === myTurn
 
+  // Briefly bounces the just-drafted player in the roster preview list, then clears itself.
+  const [justDraftedId, setJustDraftedId] = useState<string | null>(null)
+
   // Always claim your own identity, never "whoever's turn it currently looks like" - the
   // out-of-turn check in the reducer then does the actual enforcement server-side.
-  const handleDraft = (playerId: string) => selectPlayer(playerId, myTurn)
+  const handleDraft = (playerId: string) => {
+    selectPlayer(playerId, myTurn)
+    setJustDraftedId(playerId)
+    setTimeout(() => setJustDraftedId((current) => (current === playerId ? null : current)), 1000)
+  }
   const currentRoster = currentTurn === 1 ? playerOneRoster : playerTwoRoster
 
   if (connectionError) {
@@ -58,12 +65,12 @@ export function DraftBoard() {
   }
 
   if (!isConnected) {
-    return <p className="p-8 text-center text-sm text-gray-400">Connecting to this week's draft...</p>
+    return <p className="p-8 text-center text-sm text-slate-400">Connecting to this week's draft...</p>
   }
 
   return (
     <div className="mx-auto max-w-5xl space-y-4 p-3 sm:p-4">
-      <div className="flex flex-col gap-1 text-xs text-gray-400 sm:flex-row sm:justify-between">
+      <div className="flex flex-col gap-1 text-xs text-slate-400 sm:flex-row sm:justify-between">
         <span>Week {weekNumber}</span>
         <span>
           Season record: {PLAYER_DISPLAY_NAMES.player1} {seasonRecord.player1.wins}-{seasonRecord.player1.losses}
@@ -98,14 +105,24 @@ export function DraftBoard() {
           <TurnIndicator currentTurn={currentTurn} />
 
           {!isMyTurn && (
-            <p className="rounded-lg border border-gray-700 bg-gray-900 px-4 py-2 text-center text-sm text-gray-400">
+            <p className="rounded-lg border border-slate-700 bg-slate-800 px-4 py-2 text-center text-sm text-slate-400">
               Waiting for {PLAYER_DISPLAY_NAMES[currentTurn === 1 ? 'player1' : 'player2']} to pick.
             </p>
           )}
 
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <RosterPreview label={PLAYER_DISPLAY_NAMES.player1} roster={playerOneRoster} isActive={currentTurn === 1} />
-            <RosterPreview label={PLAYER_DISPLAY_NAMES.player2} roster={playerTwoRoster} isActive={currentTurn === 2} />
+            <RosterPreview
+              label={PLAYER_DISPLAY_NAMES.player1}
+              roster={playerOneRoster}
+              isActive={currentTurn === 1}
+              justAddedId={justDraftedId}
+            />
+            <RosterPreview
+              label={PLAYER_DISPLAY_NAMES.player2}
+              roster={playerTwoRoster}
+              isActive={currentTurn === 2}
+              justAddedId={justDraftedId}
+            />
           </div>
 
           <PlayerPool
@@ -164,7 +181,7 @@ function DraftCompleteSummary({ weekNumber, playerOneRoster, playerTwoRoster }: 
   return (
     <div className="space-y-4">
       <div className="rounded-lg border border-emerald-500 bg-emerald-950/30 px-4 py-3 text-center">
-        <p className="font-semibold text-emerald-400">Draft complete! Rosters are locked in for this week.</p>
+        <p className="font-bold text-emerald-500">Draft complete! Rosters are locked in for this week.</p>
         {!gamesReported && (
           <p className="mt-1 text-xs text-emerald-400/70">
             Scores will fill in once this week's games are played and Sleeper reports stats.

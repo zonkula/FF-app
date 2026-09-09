@@ -1,4 +1,5 @@
 import { Component, type ErrorInfo, type ReactNode } from 'react'
+import { Button } from './Button'
 
 interface ErrorBoundaryProps {
   children: ReactNode
@@ -29,13 +30,10 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
       return (
         <div className="mx-auto max-w-md space-y-3 p-8 text-center">
           <p className="text-sm font-semibold text-red-400">Something went wrong.</p>
-          <p className="text-xs text-gray-400">{this.state.error.message}</p>
-          <button
-            onClick={() => this.setState({ error: null })}
-            className="rounded-md bg-sky-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-sky-500"
-          >
+          <p className="text-xs text-slate-400">{this.state.error.message}</p>
+          <Button variant="outline" compact onClick={() => this.setState({ error: null })}>
             Try again
-          </button>
+          </Button>
         </div>
       )
     }

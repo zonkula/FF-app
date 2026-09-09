@@ -8,9 +8,12 @@ import { useLeagueHistory } from '../hooks/useLeagueHistory'
 import type { PlayerHistoryLine, WeekHistoryEntry } from '../utils/firebase'
 import type { WeeklyPoints } from '../services/sleeperApi'
 import { formatRelativeTime } from '../utils/relativeTime'
-import { POSITION_COLORS } from '../utils/positionColors'
 import { PLAYER_DISPLAY_NAMES } from '../utils/playerNames'
 import { PlayerAvatar } from '../components/PlayerAvatar'
+import { PositionBadge } from '../components/PositionBadge'
+import { Card } from '../components/Card'
+import { Button } from '../components/Button'
+import { FORM_CONTROL_CLASSES } from '../components/Input'
 
 interface DisplayLine {
   id: string
@@ -66,10 +69,10 @@ const STATUS_LABEL: Record<MatchupStatus, string> = {
 }
 
 const STATUS_COLOR: Record<MatchupStatus, string> = {
-  final: 'bg-gray-700 text-gray-300',
-  live: 'bg-emerald-600 text-white',
-  'draft-in-progress': 'bg-amber-600 text-white',
-  'no-data': 'bg-gray-800 text-gray-500',
+  final: 'bg-slate-700 text-slate-300',
+  live: 'bg-emerald-500 text-white',
+  'draft-in-progress': 'bg-amber-500 text-white',
+  'no-data': 'bg-slate-800 text-slate-500',
 }
 
 export function MatchupPage() {
@@ -102,7 +105,7 @@ export function MatchupPage() {
   }
 
   if (!isConnected) {
-    return <p className="p-8 text-center text-sm text-gray-400">Connecting...</p>
+    return <p className="p-8 text-center text-sm text-slate-400">Connecting...</p>
   }
 
   const status: MatchupStatus = historyEntry
@@ -125,6 +128,7 @@ export function MatchupPage() {
   const p1Total = historyEntry ? historyEntry.player1Score : liveP1Total
   const p2Total = historyEntry ? historyEntry.player2Score : liveP2Total
   const showProjected = status === 'live' || status === 'draft-in-progress'
+  const isLive = status === 'live'
 
   return (
     <div className="mx-auto max-w-5xl space-y-4 p-3 sm:p-4">
@@ -134,43 +138,43 @@ export function MatchupPage() {
         onChange={(w) => setSelectedWeek(w === weekNumber ? null : w)}
       />
 
-      <div className="flex flex-col gap-3 rounded-lg border border-gray-700 bg-gray-900 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-center gap-3">
-          <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${STATUS_COLOR[status]}`}>
-            {STATUS_LABEL[status]}
-          </span>
-          <span className="text-sm text-gray-400">Week {activeWeek} matchup</span>
-        </div>
-        {status !== 'no-data' && status !== 'draft-in-progress' && (
-          <div className="text-lg font-semibold text-gray-100">
-            {p1Total.toFixed(1)} <span className="text-sm font-normal text-gray-500">vs</span> {p2Total.toFixed(1)}
+      <Card padding="px-4 py-3" hoverGlow={false}>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center gap-3">
+            <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${STATUS_COLOR[status]}`}>
+              {STATUS_LABEL[status]}
+            </span>
+            <span className="text-sm text-slate-400">Week {activeWeek} matchup</span>
           </div>
-        )}
-      </div>
+          {status !== 'no-data' && status !== 'draft-in-progress' && (
+            <div
+              className={`text-lg font-bold ${isLive ? 'animate-pulse text-emerald-500' : 'text-white'}`}
+            >
+              {p1Total.toFixed(1)} <span className="text-sm font-normal text-slate-500">vs</span> {p2Total.toFixed(1)}
+            </div>
+          )}
+        </div>
+      </Card>
 
       {status === 'live' && (
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-          <button
-            onClick={refresh}
-            disabled={scoresLoading}
-            className="min-h-[48px] rounded-md bg-sky-600 px-4 text-sm font-medium text-white hover:bg-sky-500 disabled:cursor-not-allowed disabled:opacity-60"
-          >
+          <Button onClick={refresh} disabled={scoresLoading}>
             {scoresLoading ? 'Refreshing scores...' : 'Refresh Scores'}
-          </button>
+          </Button>
           {lastUpdated != null && (
-            <span className="text-xs text-gray-500">Last updated: {formatRelativeTime(lastUpdated, now)}</span>
+            <span className="text-xs text-slate-500">Last updated: {formatRelativeTime(lastUpdated, now)}</span>
           )}
         </div>
       )}
 
       {status === 'draft-in-progress' && (
-        <p className="rounded-lg border border-amber-700 bg-amber-950/30 px-4 py-3 text-sm text-amber-300">
+        <p className="rounded-lg border border-amber-500 bg-amber-950/30 px-4 py-3 text-sm text-amber-300">
           This week's draft isn't complete yet - the matchup starts once both rosters are set.
         </p>
       )}
 
       {status === 'no-data' && (
-        <p className="rounded-lg border border-gray-700 bg-gray-900 px-4 py-3 text-sm text-gray-500">
+        <p className="rounded-lg border border-slate-700 bg-slate-800 px-4 py-3 text-sm text-slate-500">
           No results recorded for week {activeWeek}.
         </p>
       )}
@@ -184,12 +188,14 @@ export function MatchupPage() {
             lines={p1Lines}
             total={p1Total}
             showProjected={showProjected}
+            isLive={isLive}
           />
           <RosterLinesCard
             label={PLAYER_DISPLAY_NAMES.player2}
             lines={p2Lines}
             total={p2Total}
             showProjected={showProjected}
+            isLive={isLive}
           />
         </div>
       )}
@@ -212,14 +218,14 @@ function WeekNav({
       <button
         onClick={() => onChange(Math.max(1, activeWeek - 1))}
         disabled={activeWeek <= 1}
-        className="flex min-h-[48px] min-w-[48px] items-center justify-center rounded-md border border-gray-700 text-sm text-gray-300 hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-40"
+        className="flex min-h-[48px] min-w-[48px] items-center justify-center rounded-md border-2 border-slate-700 text-sm text-slate-300 transition-colors duration-300 hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-40"
       >
         ←
       </button>
       <select
         value={activeWeek}
         onChange={(e) => onChange(Number(e.target.value))}
-        className="min-h-[48px] rounded-md border border-gray-700 bg-gray-800 px-3 text-sm text-gray-100 focus:border-sky-500 focus:outline-none"
+        className={`min-h-[48px] ${FORM_CONTROL_CLASSES}`}
       >
         {weeks.map((w) => (
           <option key={w} value={w}>
@@ -230,7 +236,7 @@ function WeekNav({
       <button
         onClick={() => onChange(Math.min(maxWeek, activeWeek + 1))}
         disabled={activeWeek >= maxWeek}
-        className="flex min-h-[48px] min-w-[48px] items-center justify-center rounded-md border border-gray-700 text-sm text-gray-300 hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-40"
+        className="flex min-h-[48px] min-w-[48px] items-center justify-center rounded-md border-2 border-slate-700 text-sm text-slate-300 transition-colors duration-300 hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-40"
       >
         →
       </button>
@@ -241,7 +247,7 @@ function WeekNav({
 function HistoricalResultBanner({ entry }: { entry: WeekHistoryEntry }) {
   const winnerLabel = entry.winner === 'tie' ? "It's a tie." : `${PLAYER_DISPLAY_NAMES[entry.winner]} won.`
   return (
-    <p className="rounded-lg border border-gray-700 bg-gray-900 px-4 py-2 text-center text-sm text-gray-300">
+    <p className="rounded-lg border border-slate-700 bg-slate-800 px-4 py-2 text-center text-sm text-slate-300">
       {winnerLabel}
     </p>
   )
@@ -252,22 +258,26 @@ function RosterLinesCard({
   lines,
   total,
   showProjected,
+  isLive,
 }: {
   label: string
   lines: DisplayLine[]
   total: number
   showProjected: boolean
+  isLive: boolean
 }) {
   return (
-    <div className="rounded-lg border border-gray-700 bg-gray-900 p-4">
+    <Card padding="p-4" hoverGlow={false}>
       <div className="mb-2 flex items-center justify-between">
-        <h3 className="font-semibold text-gray-100">{label}</h3>
-        <span className="text-sm text-gray-300">{total.toFixed(1)} pts</span>
+        <h3 className="font-semibold text-white">{label}</h3>
+        <span className={`text-sm font-bold ${isLive ? 'animate-pulse text-emerald-500' : 'text-slate-300'}`}>
+          {total.toFixed(1)} pts
+        </span>
       </div>
       <div className="overflow-x-auto">
         <table className="w-full min-w-[20rem] text-sm">
           <thead>
-            <tr className="border-b border-gray-800 text-left text-xs text-gray-500">
+            <tr className="border-b border-slate-700 text-left text-xs text-slate-500">
               <th className="py-1.5 font-medium">Player</th>
               {showProjected && <th className="py-1.5 text-right font-medium">Proj.</th>}
               <th className="py-1.5 text-right font-medium">Pts</th>
@@ -275,29 +285,33 @@ function RosterLinesCard({
           </thead>
           <tbody>
             {lines.map((line) => (
-              <tr key={line.id} className="border-b border-gray-800/50 last:border-0">
+              <tr key={line.id} className="border-b border-slate-800 last:border-0">
                 <td className="py-1.5">
                   <div className="flex items-center gap-2">
                     <PlayerAvatar player={line} />
                     <span>
-                      <span className="text-gray-200">{line.name}</span>{' '}
-                      <span className={`rounded px-1.5 py-0.5 text-xs ${POSITION_COLORS[line.position]}`}>
-                        {line.position}
-                      </span>
+                      <span className="text-slate-200">{line.name}</span>{' '}
+                      <PositionBadge position={line.position} />
                     </span>
                   </div>
                 </td>
                 {showProjected && (
-                  <td className="py-1.5 text-right text-gray-500">
+                  <td className="py-1.5 text-right text-slate-500">
                     {line.projected != null ? line.projected.toFixed(1) : '—'}
                   </td>
                 )}
-                <td className="py-1.5 text-right text-gray-300">{line.actual != null ? line.actual.toFixed(1) : '—'}</td>
+                <td
+                  className={`py-1.5 text-right ${
+                    isLive && line.actual != null ? 'animate-pulse font-bold text-emerald-500' : 'text-slate-300'
+                  }`}
+                >
+                  {line.actual != null ? line.actual.toFixed(1) : '—'}
+                </td>
               </tr>
             ))}
           </tbody>
         </table>
       </div>
-    </div>
+    </Card>
   )
 }

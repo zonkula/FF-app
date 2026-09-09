@@ -1,6 +1,9 @@
 import { useState, type FormEvent } from 'react'
 import { Navigate, useNavigate } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
+import { Card } from '../components/Card'
+import { Input } from '../components/Input'
+import { Button } from '../components/Button'
 
 export function LoginPage() {
   const { user, login } = useAuth()
@@ -28,26 +31,24 @@ export function LoginPage() {
 
   return (
     <div className="mx-auto flex min-h-[70vh] max-w-sm flex-col items-center justify-center p-8">
-      <h1 className="mb-1 text-2xl font-bold text-gray-100">Zonk vs Brakke</h1>
-      <p className="mb-6 text-sm text-gray-500">1v1 Weekly Fantasy Draft</p>
-      <form onSubmit={handleSubmit} className="w-full space-y-3">
-        <input
-          type="password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          placeholder="Password"
-          autoFocus
-          className="min-h-[48px] w-full rounded-md border border-gray-700 bg-gray-800 px-3 text-sm text-gray-100 placeholder-gray-500 focus:border-sky-500 focus:outline-none"
-        />
-        {error && <p className="text-sm text-red-400">{error}</p>}
-        <button
-          type="submit"
-          disabled={submitting}
-          className="min-h-[48px] w-full rounded-md bg-sky-600 px-3 text-sm font-medium text-white hover:bg-sky-500 disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          {submitting ? 'Logging in...' : 'Log in'}
-        </button>
-      </form>
+      <h1 className="mb-1 text-h1 text-white">Zonk vs Brakke</h1>
+      <p className="mb-6 text-sm text-slate-400">1v1 Weekly Fantasy Draft</p>
+      <Card className="w-full" padding="p-6" hoverGlow={false}>
+        <form onSubmit={handleSubmit} className="space-y-3">
+          <Input
+            type="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            placeholder="Password"
+            autoFocus
+            className="w-full"
+          />
+          {error && <p className="text-sm text-red-400">{error}</p>}
+          <Button type="submit" disabled={submitting} className="w-full">
+            {submitting ? 'Logging in...' : 'Log in'}
+          </Button>
+        </form>
+      </Card>
     </div>
   )
 }

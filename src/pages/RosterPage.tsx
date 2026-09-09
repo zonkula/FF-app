@@ -5,9 +5,12 @@ import { usePlayers } from '../context/PlayersContext'
 import { useAuth } from '../hooks/useAuth'
 import { useWeeklyProjections } from '../hooks/useWeeklyProjections'
 import { organizeRosterByPosition, type OrganizedRoster } from '../context/rosterRules'
-import { POSITION_COLORS } from '../utils/positionColors'
 import { displayNameForTurn, turnForPlayerName } from '../utils/playerNames'
 import { PlayerAvatar } from '../components/PlayerAvatar'
+import { PositionBadge } from '../components/PositionBadge'
+import { Card } from '../components/Card'
+import { Input } from '../components/Input'
+import { Button } from '../components/Button'
 import type { Turn } from '../context/DraftContext'
 import type { WeeklyPoints } from '../services/sleeperApi'
 
@@ -51,7 +54,7 @@ export function RosterPage() {
   }
 
   if (!isConnected) {
-    return <p className="p-8 text-center text-sm text-gray-400">Connecting...</p>
+    return <p className="p-8 text-center text-sm text-slate-400">Connecting...</p>
   }
 
   async function handleSwapConfirm(newPlayer: Player) {
@@ -68,26 +71,26 @@ export function RosterPage() {
   return (
     <div className="mx-auto max-w-3xl space-y-4 p-3 sm:p-4">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <span className="text-sm text-gray-400">
-          Logged in as <span className="font-semibold text-gray-200">{user}</span>
+        <span className="text-sm text-slate-400">
+          Logged in as <span className="font-semibold text-white">{user}</span>
         </span>
-        <button
+        <Button
+          variant="outline"
           onClick={() => {
             setViewingOpponent((v) => !v)
             setSwapOutPlayer(null)
             setActionError(null)
           }}
-          className="min-h-[48px] rounded-md border border-gray-700 px-3 text-sm font-medium text-gray-300 hover:bg-gray-800"
         >
           {viewingOpponent ? 'View My Roster' : 'View Opponent Roster'}
-        </button>
+        </Button>
       </div>
 
-      <div className="rounded-lg border border-gray-700 bg-gray-900 p-3 sm:p-4">
+      <Card padding="p-3 sm:p-4" hoverGlow={false}>
         <div className="mb-3 flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
-          <h2 className="font-semibold text-gray-100">{displayNameForTurn(shownTurn)}'s Roster</h2>
-          <span className="text-sm text-gray-400">
-            Total projected: <span className="font-semibold text-gray-100">{totalProjected.toFixed(1)}</span> pts
+          <h2 className="font-semibold text-white">{displayNameForTurn(shownTurn)}'s Roster</h2>
+          <span className="text-sm text-slate-400">
+            Total projected: <span className="font-semibold text-white">{totalProjected.toFixed(1)}</span> pts
           </span>
         </div>
 
@@ -108,42 +111,41 @@ export function RosterPage() {
             const entries = slotEntries(organized, slot)
             return (
               <div key={slot} className="flex items-start gap-3 text-sm">
-                <span className="w-12 shrink-0 pt-1 text-xs font-semibold text-gray-500">{slot}</span>
+                <span className="w-12 shrink-0 pt-1 text-xs font-semibold text-slate-500">{slot}</span>
                 {entries.length === 0 ? (
-                  <span className="pt-1 text-gray-600">—</span>
+                  <span className="pt-1 text-slate-600">—</span>
                 ) : (
                   <div className="flex-1 space-y-1">
                     {entries.map((player) => (
                       <div
                         key={player.id}
-                        className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 rounded px-2 py-1.5 hover:bg-gray-800/50"
+                        className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 rounded px-2 py-1.5 transition-colors duration-300 hover:bg-slate-700/50"
                       >
-                        <span className="flex items-center gap-3 text-gray-200">
+                        <span className="flex items-center gap-3 text-slate-200">
                           <PlayerAvatar player={player} size="lg" />
                           <span>
                             {player.name}{' '}
-                            <span className={`rounded px-1.5 py-0.5 text-xs ${POSITION_COLORS[player.position]}`}>
-                              {player.position}
-                            </span>{' '}
-                            <span className="text-xs text-gray-500">
+                            <PositionBadge position={player.position} />{' '}
+                            <span className="text-xs text-slate-500">
                               {player.nflTeam} · Bye {player.byeWeek}
                             </span>
                           </span>
                         </span>
                         <div className="flex shrink-0 items-center gap-3">
-                          <span className="text-xs text-gray-500">
+                          <span className="text-xs text-slate-500">
                             {(projections[player.id] ?? 0).toFixed(1)} pts
                           </span>
                           {isMine && slot === 'FLEX' && (
-                            <button
+                            <Button
+                              variant="outline"
+                              compact
                               onClick={() => {
                                 setSwapOutPlayer(player)
                                 setActionError(null)
                               }}
-                              className="min-h-[40px] rounded-md border border-sky-700 px-3 text-xs font-medium text-sky-400 hover:bg-sky-950"
                             >
                               Swap
-                            </button>
+                            </Button>
                           )}
                         </div>
                       </div>
@@ -154,7 +156,7 @@ export function RosterPage() {
             )
           })}
         </div>
-      </div>
+      </Card>
 
       {swapOutPlayer && (
         <FlexSwapPicker
@@ -198,7 +200,7 @@ function FlexSwapPicker({ outgoing, candidates, projections, error, onCancel, on
         </p>
         <button
           onClick={onCancel}
-          className="min-h-[44px] self-start rounded-md px-3 text-xs text-gray-400 hover:bg-sky-900/40 hover:text-gray-200 sm:self-auto"
+          className="min-h-[44px] self-start rounded-md px-3 text-xs text-slate-400 hover:bg-sky-900/40 hover:text-slate-200 sm:self-auto"
         >
           Cancel
         </button>
@@ -206,36 +208,31 @@ function FlexSwapPicker({ outgoing, candidates, projections, error, onCancel, on
 
       {error && <p className="mb-2 text-sm text-red-400">{error}</p>}
 
-      <input
+      <Input
         type="text"
         value={search}
         onChange={(e) => setSearch(e.target.value)}
         placeholder="Search players..."
-        className="mb-3 min-h-[48px] w-full rounded-md border border-gray-700 bg-gray-800 px-3 text-sm text-gray-100 placeholder-gray-500 focus:border-sky-500 focus:outline-none"
+        className="mb-3 w-full"
       />
 
       <ul className="max-h-72 space-y-1 overflow-y-auto">
         {sorted.length === 0 ? (
-          <li className="py-4 text-center text-sm text-gray-500">No players match.</li>
+          <li className="py-4 text-center text-sm text-slate-500">No players match.</li>
         ) : (
           sorted.map((player) => (
             <li key={player.id} className="flex items-center justify-between gap-2 text-sm">
-              <span className="flex items-center gap-2 text-gray-200">
+              <span className="flex items-center gap-2 text-slate-200">
                 <PlayerAvatar player={player} />
                 <span>
                   {player.name}{' '}
-                  <span className={`rounded px-1.5 py-0.5 text-xs ${POSITION_COLORS[player.position]}`}>
-                    {player.position}
-                  </span>{' '}
-                  <span className="text-xs text-gray-500">{(projections[player.id] ?? 0).toFixed(1)} pts</span>
+                  <PositionBadge position={player.position} />{' '}
+                  <span className="text-xs text-slate-500">{(projections[player.id] ?? 0).toFixed(1)} pts</span>
                 </span>
               </span>
-              <button
-                onClick={() => onConfirm(player)}
-                className="min-h-[44px] shrink-0 rounded-md bg-sky-600 px-3 text-xs font-medium text-white hover:bg-sky-500"
-              >
+              <Button compact onClick={() => onConfirm(player)}>
                 Swap In
-              </button>
+              </Button>
             </li>
           ))
         )}

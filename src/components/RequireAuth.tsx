@@ -28,7 +28,7 @@ export function RequireAuth({ children }: { children: ReactNode }) {
   }
 
   if (loading) {
-    return <p className="p-8 text-center text-sm text-gray-400">Loading players from Sleeper...</p>
+    return <p className="p-8 text-center text-sm text-slate-400">Loading players from Sleeper...</p>
   }
 
   return (

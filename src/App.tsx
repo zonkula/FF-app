@@ -9,7 +9,7 @@ function App() {
     <AdminAuthProvider>
       <AuthProvider>
         <PlayersProvider>
-          <div className="min-h-screen bg-gray-950 text-white">
+          <div className="min-h-screen bg-slate-900 text-white">
             <NavHeader />
             <AppRoutes />
           </div>

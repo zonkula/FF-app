@@ -6,9 +6,12 @@ import { usePlayers } from '../context/PlayersContext'
 import { useAuth } from '../hooks/useAuth'
 import { useWeeklyProjections } from '../hooks/useWeeklyProjections'
 import { canDraftPosition } from '../context/rosterRules'
-import { POSITION_COLORS } from '../utils/positionColors'
 import { turnForPlayerName } from '../utils/playerNames'
 import { PlayerAvatar } from '../components/PlayerAvatar'
+import { PositionBadge } from '../components/PositionBadge'
+import { Card } from '../components/Card'
+import { Input } from '../components/Input'
+import { Button } from '../components/Button'
 
 type PositionFilter = Position | 'ALL'
 const POSITIONS: PositionFilter[] = ['ALL', 'QB', 'RB', 'WR', 'TE', 'K', 'DEF']
@@ -60,7 +63,7 @@ export function WaiverPage() {
   }
 
   if (!isConnected) {
-    return <p className="p-8 text-center text-sm text-gray-400">Connecting...</p>
+    return <p className="p-8 text-center text-sm text-slate-400">Connecting...</p>
   }
 
   async function handleAdd(player: Player) {
@@ -93,12 +96,12 @@ export function WaiverPage() {
   return (
     <div className="mx-auto max-w-5xl space-y-4 p-3 sm:p-4">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <span className="text-sm text-gray-400">
-          Adding to <span className="font-semibold text-gray-200">{user}</span>'s roster
+        <span className="text-sm text-slate-400">
+          Adding to <span className="font-semibold text-white">{user}</span>'s roster
         </span>
         <Link
           to="/roster"
-          className="flex min-h-[48px] items-center justify-center rounded-md border border-gray-700 px-3 text-sm font-medium text-gray-300 hover:bg-gray-800"
+          className="flex min-h-[48px] items-center justify-center rounded-lg border-2 border-sky-500 px-6 text-sm font-semibold text-sky-500 transition-all duration-300 hover:bg-sky-500 hover:text-slate-900"
         >
           View My Roster
         </Link>
@@ -135,16 +138,10 @@ export function WaiverPage() {
         />
       )}
 
-      <div className="rounded-lg border border-gray-700 bg-gray-900 p-4">
+      <Card padding="p-4" hoverGlow={false}>
         <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-          <input
-            type="text"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search players..."
-            className="min-h-[48px] rounded-md border border-gray-700 bg-gray-800 px-3 text-sm text-gray-100 placeholder-gray-500 focus:border-sky-500 focus:outline-none"
-          />
-          <span className="text-xs text-gray-500">Sorted by projected points (Week {week ?? '—'})</span>
+          <Input type="text" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search players..." />
+          <span className="text-xs text-slate-500">Sorted by projected points (Week {week ?? '—'})</span>
         </div>
 
         <div className="mb-3 flex flex-wrap gap-1.5">
@@ -152,10 +149,10 @@ export function WaiverPage() {
             <button
               key={position}
               onClick={() => setPositionFilter(position)}
-              className={`min-h-[40px] rounded-full px-3 text-xs font-medium transition-colors ${
+              className={`min-h-[40px] rounded-full px-3 text-xs font-semibold transition-colors duration-300 ${
                 positionFilter === position
-                  ? 'bg-sky-600 text-white'
-                  : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
+                  ? 'bg-gradient-to-r from-blue-800 to-sky-500 text-white shadow-md'
+                  : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
               }`}
             >
               {position}
@@ -165,11 +162,11 @@ export function WaiverPage() {
 
         <div className="max-h-[32rem] overflow-y-auto overflow-x-auto">
           {visiblePlayers.length === 0 ? (
-            <p className="py-6 text-center text-sm text-gray-500">No players match.</p>
+            <p className="py-6 text-center text-sm text-slate-500">No players match.</p>
           ) : (
             <table className="w-full min-w-[26rem] text-sm">
               <thead>
-                <tr className="border-b border-gray-800 text-left text-xs text-gray-500">
+                <tr className="border-b border-slate-700 text-left text-xs text-slate-500">
                   <th className="py-2 font-medium">Player</th>
                   <th className="py-2 font-medium">Bye</th>
                   <th className="py-2 font-medium">Proj. pts</th>
@@ -178,28 +175,23 @@ export function WaiverPage() {
               </thead>
               <tbody>
                 {visiblePlayers.map((player) => (
-                  <tr key={player.id} className="border-b border-gray-800/50 last:border-0">
+                  <tr key={player.id} className="border-b border-slate-800 last:border-0">
                     <td className="py-2">
                       <div className="flex items-center gap-2">
                         <PlayerAvatar player={player} />
                         <span>
-                          <span className="text-gray-100">{player.name}</span>{' '}
-                          <span className={`ml-1 rounded px-1.5 py-0.5 text-xs ${POSITION_COLORS[player.position]}`}>
-                            {player.position}
-                          </span>{' '}
-                          <span className="text-xs text-gray-500">{player.nflTeam}</span>
+                          <span className="text-white">{player.name}</span>{' '}
+                          <PositionBadge position={player.position} className="ml-1" />{' '}
+                          <span className="text-xs text-slate-500">{player.nflTeam}</span>
                         </span>
                       </div>
                     </td>
-                    <td className="py-2 text-gray-400">{player.byeWeek}</td>
-                    <td className="py-2 text-gray-400">{(projections[player.id] ?? 0).toFixed(1)}</td>
+                    <td className="py-2 text-slate-400">{player.byeWeek}</td>
+                    <td className="py-2 text-slate-400">{(projections[player.id] ?? 0).toFixed(1)}</td>
                     <td className="py-2 text-right">
-                      <button
-                        onClick={() => handleAdd(player)}
-                        className="min-h-[44px] rounded-md bg-sky-600 px-3 text-xs font-medium text-white hover:bg-sky-500"
-                      >
+                      <Button compact onClick={() => handleAdd(player)}>
                         Add Player
-                      </button>
+                      </Button>
                     </td>
                   </tr>
                 ))}
@@ -207,7 +199,7 @@ export function WaiverPage() {
             </table>
           )}
         </div>
-      </div>
+      </Card>
     </div>
   )
 }
@@ -230,7 +222,7 @@ function DropPicker({ addPlayer, roster, error, onCancel, onConfirm }: DropPicke
         </p>
         <button
           onClick={onCancel}
-          className="min-h-[44px] self-start rounded-md px-3 text-xs text-gray-400 hover:bg-amber-900/40 hover:text-gray-200 sm:self-auto"
+          className="min-h-[44px] self-start rounded-md px-3 text-xs text-slate-400 hover:bg-amber-900/40 hover:text-slate-200 sm:self-auto"
         >
           Cancel
         </button>
@@ -248,20 +240,19 @@ function DropPicker({ addPlayer, roster, error, onCancel, onConfirm }: DropPicke
             <li key={player.id} className="flex items-center justify-between gap-2 text-sm">
               <span className="flex items-center gap-2">
                 <PlayerAvatar player={player} />
-                <span className={wouldWork ? 'text-gray-200' : 'text-gray-500'}>
-                  {player.name} <span className="text-xs text-gray-500">({player.position})</span>
+                <span className={wouldWork ? 'text-slate-200' : 'text-slate-500'}>
+                  {player.name} <span className="text-xs text-slate-500">({player.position})</span>
                 </span>
               </span>
-              <button
+              <Button
+                variant="warning"
+                compact
                 onClick={() => onConfirm(player)}
                 disabled={!wouldWork}
                 title={wouldWork ? undefined : `Dropping ${player.name} wouldn't free a slot for ${addPlayer.position}`}
-                className={`min-h-[44px] shrink-0 rounded-md px-3 text-xs font-medium text-white ${
-                  wouldWork ? 'bg-amber-600 hover:bg-amber-500' : 'cursor-not-allowed bg-gray-700'
-                }`}
               >
                 Drop &amp; Add
-              </button>
+              </Button>
             </li>
           )
         })}

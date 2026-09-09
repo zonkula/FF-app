@@ -1,10 +1,17 @@
 import type { Position } from '../types/player'
 
-export const POSITION_COLORS: Record<Position, string> = {
-  QB: 'bg-red-500/20 text-red-300',
-  RB: 'bg-green-500/20 text-green-300',
-  WR: 'bg-blue-500/20 text-blue-300',
-  TE: 'bg-orange-500/20 text-orange-300',
-  K: 'bg-purple-500/20 text-purple-300',
-  DEF: 'bg-gray-500/20 text-gray-300',
+/** Bold, saturated per-position fill - shared by PositionBadge (pill) and PlayerAvatar (initials fallback circle). */
+export const POSITION_BADGE_BG: Record<Position, string> = {
+  QB: 'bg-blue-500',
+  RB: 'bg-emerald-500',
+  WR: 'bg-amber-500',
+  TE: 'bg-violet-500',
+  K: 'bg-indigo-500',
+  DEF: 'bg-red-500',
+}
+
+/** Same palette, extended with FLEX - a roster slot, not a Player position - for roster slot-usage pills. */
+export const SLOT_BADGE_BG: Record<Position | 'FLEX', string> = {
+  ...POSITION_BADGE_BG,
+  FLEX: 'bg-pink-500',
 }
