@@ -1,5 +1,5 @@
 import type { Player } from '../types/player'
-import { FLEX_SLOTS, getSlotUsage, ROSTER_REQUIREMENTS, ROSTER_SIZE } from '../context/rosterRules'
+import { FLEX_SLOTS, getSlotUsage, ROSTER_REQUIREMENTS, ROSTER_SIZE, sortBySlotOrder } from '../context/rosterRules'
 import { PlayerAvatar } from './PlayerAvatar'
 import { Card } from './Card'
 
@@ -58,7 +58,7 @@ export function RosterPreview({ label, roster, isActive, badge, justAddedId }: R
         <p className="text-sm text-slate-500">No picks yet.</p>
       ) : (
         <ul className="space-y-1">
-          {roster.map((player) => (
+          {sortBySlotOrder(roster).map((player) => (
             <li
               key={player.id}
               className={`flex items-center justify-between rounded text-sm ${

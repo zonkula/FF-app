@@ -4,7 +4,7 @@ import { useDraft } from '../hooks/useDraft'
 import { usePlayers } from '../context/PlayersContext'
 import { useAuth } from '../hooks/useAuth'
 import { useWeeklyProjections } from '../hooks/useWeeklyProjections'
-import { organizeRosterByPosition, type OrganizedRoster } from '../context/rosterRules'
+import { organizeRosterByPosition, slotEntries, SLOT_ORDER } from '../context/rosterRules'
 import { displayNameForTurn, turnForPlayerName } from '../utils/playerNames'
 import { PlayerAvatar } from '../components/PlayerAvatar'
 import { PositionBadge } from '../components/PositionBadge'
@@ -13,14 +13,6 @@ import { Input } from '../components/Input'
 import { Button } from '../components/Button'
 import type { Turn } from '../context/DraftContext'
 import type { WeeklyPoints } from '../services/sleeperApi'
-
-const SLOT_ORDER = ['QB', 'RB', 'WR', 'TE', 'FLEX', 'K', 'DEF'] as const
-
-function slotEntries(organized: OrganizedRoster, slot: (typeof SLOT_ORDER)[number]): Player[] {
-  const value = organized[slot]
-  if (Array.isArray(value)) return value
-  return value ? [value] : []
-}
 
 function otherTurn(turn: Turn): Turn {
   return turn === 1 ? 2 : 1

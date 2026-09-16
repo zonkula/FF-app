@@ -9,6 +9,7 @@ import type { PlayerHistoryLine, WeekHistoryEntry } from '../utils/firebase'
 import type { WeeklyPoints } from '../services/sleeperApi'
 import { formatRelativeTime } from '../utils/relativeTime'
 import { PLAYER_DISPLAY_NAMES } from '../utils/playerNames'
+import { sortBySlotOrder } from '../context/rosterRules'
 import { PlayerAvatar } from '../components/PlayerAvatar'
 import { PositionBadge } from '../components/PositionBadge'
 import { Card } from '../components/Card'
@@ -281,7 +282,7 @@ function RosterLinesCard({
             </tr>
           </thead>
           <tbody>
-            {lines.map((line) => (
+            {sortBySlotOrder(lines).map((line) => (
               <tr key={line.id} className="border-b border-slate-800 last:border-0">
                 <td className="py-1.5">
                   <div className="flex items-center gap-2">

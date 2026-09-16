@@ -60,19 +60,25 @@ export function describeNoSlotError(position: Position): string {
 }
 
 /** A completed roster grouped by lineup slot, matching how it's stored under `rosters/week-N/`. */
-export interface OrganizedRoster {
-  QB: Player | null
-  RB: Player[]
-  WR: Player[]
-  TE: Player[]
-  FLEX: Player[]
-  K: Player | null
-  DEF: Player | null
+export interface OrganizedRosterOf<T> {
+  QB: T | null
+  RB: T[]
+  WR: T[]
+  TE: T[]
+  FLEX: T[]
+  K: T | null
+  DEF: T | null
 }
 
-/** Groups a flat, ordered pick list into lineup slots using the same greedy fill as getSlotUsage. */
-export function organizeRosterByPosition(roster: Player[]): OrganizedRoster {
-  const result: OrganizedRoster = { QB: null, RB: [], WR: [], TE: [], FLEX: [], K: null, DEF: null }
+export type OrganizedRoster = OrganizedRosterOf<Player>
+
+/**
+ * Groups a flat, ordered pick list into lineup slots using the same greedy fill as getSlotUsage.
+ * Generic over anything with a `position` (not just full Player records) so display-only view
+ * models (e.g. Matchup's DisplayLine) can be organized the same way without a real Player.
+ */
+export function organizeRosterByPosition<T extends { position: Position }>(roster: T[]): OrganizedRosterOf<T> {
+  const result: OrganizedRosterOf<T> = { QB: null, RB: [], WR: [], TE: [], FLEX: [], K: null, DEF: null }
   const slotsUsed: Record<Position, number> = { QB: 0, RB: 0, WR: 0, TE: 0, K: 0, DEF: 0 }
 
   for (const player of roster) {
@@ -89,4 +95,23 @@ export function organizeRosterByPosition(roster: Player[]): OrganizedRoster {
   }
 
   return result
+}
+
+/** Lineup slot display order used everywhere a roster is shown: QB, RB, WR, TE, FLEX, K, DEF. */
+export const SLOT_ORDER = ['QB', 'RB', 'WR', 'TE', 'FLEX', 'K', 'DEF'] as const
+export type RosterSlot = (typeof SLOT_ORDER)[number]
+
+export function slotEntries<T>(organized: OrganizedRosterOf<T>, slot: RosterSlot): T[] {
+  const value = organized[slot]
+  if (Array.isArray(value)) return value
+  return value ? [value] : []
+}
+
+/**
+ * Flattens a roster into slot display order (QB, RB, WR, TE, FLEX, K, DEF) - for contexts that
+ * just need player rows arranged like the Roster page, not its grouped OrganizedRoster shape.
+ */
+export function sortBySlotOrder<T extends { position: Position }>(roster: T[]): T[] {
+  const organized = organizeRosterByPosition(roster)
+  return SLOT_ORDER.flatMap((slot) => slotEntries(organized, slot))
 }
