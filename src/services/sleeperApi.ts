@@ -131,3 +131,26 @@ export async function fetchWeeklyScores(season: string, week: number): Promise<W
 export async function fetchWeeklyProjections(season: string, week: number): Promise<WeeklyPoints> {
   return fetchPprPoints(`${SLEEPER_BASE}/v1/projections/nfl/regular/${season}/${week}`, 'projections')
 }
+
+export interface Opponent {
+  opponent: string
+  isHome: boolean
+}
+
+/** team abbreviation -> who they play that week. A team missing from this map is on a bye. */
+export type WeeklyOpponents = Record<string, Opponent>
+
+/** Which team each team plays in a given week, from the same public schedule byes are derived from. */
+export async function fetchWeeklyOpponents(season: string, week: number): Promise<WeeklyOpponents> {
+  const res = await fetch(`${SLEEPER_BASE}/schedule/nfl/regular/${season}`)
+  if (!res.ok) throw new Error(`Sleeper schedule request failed: ${res.status}`)
+  const games: SleeperGame[] = await res.json()
+
+  const opponents: WeeklyOpponents = {}
+  for (const game of games) {
+    if (game.week !== week) continue
+    opponents[game.home] = { opponent: game.away, isHome: true }
+    opponents[game.away] = { opponent: game.home, isHome: false }
+  }
+  return opponents
+}

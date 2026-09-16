@@ -5,6 +5,7 @@ import { useDraft } from '../hooks/useDraft'
 import { usePlayers } from '../context/PlayersContext'
 import { useAuth } from '../hooks/useAuth'
 import { useWeeklyProjections } from '../hooks/useWeeklyProjections'
+import { useWeeklyOpponents, formatOpponent } from '../hooks/useWeeklyOpponents'
 import { canDraftPosition } from '../context/rosterRules'
 import { turnForPlayerName } from '../utils/playerNames'
 import { PlayerAvatar } from '../components/PlayerAvatar'
@@ -27,6 +28,7 @@ export function WaiverPage() {
     addWaiverPlayer,
   } = useDraft()
   const { projections } = useWeeklyProjections(week)
+  const { opponents } = useWeeklyOpponents(week)
 
   // No "acting as" toggle anymore - you can only add/drop for the player you're logged in as.
   const { user } = useAuth()
@@ -164,10 +166,11 @@ export function WaiverPage() {
           {visiblePlayers.length === 0 ? (
             <p className="py-6 text-center text-sm text-slate-500">No players match.</p>
           ) : (
-            <table className="w-full min-w-[26rem] text-sm">
+            <table className="w-full min-w-[30rem] text-sm">
               <thead>
                 <tr className="border-b border-slate-700 text-left text-xs text-slate-500">
                   <th className="py-2 font-medium">Player</th>
+                  <th className="py-2 font-medium">Opp</th>
                   <th className="py-2 font-medium">Bye</th>
                   <th className="py-2 font-medium">Proj. pts</th>
                   <th className="py-2" />
@@ -186,6 +189,7 @@ export function WaiverPage() {
                         </span>
                       </div>
                     </td>
+                    <td className="py-2 text-slate-400">{formatOpponent(player.nflTeam, opponents)}</td>
                     <td className="py-2 text-slate-400">{player.byeWeek}</td>
                     <td className="py-2 text-slate-400">{(projections[player.id] ?? 0).toFixed(1)}</td>
                     <td className="py-2 text-right">

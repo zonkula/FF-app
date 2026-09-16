@@ -5,6 +5,8 @@ import { PositionBadge } from './PositionBadge'
 import { Card } from './Card'
 import { Input, FORM_CONTROL_CLASSES } from './Input'
 import { Button } from './Button'
+import { usePlayers } from '../context/PlayersContext'
+import { useWeeklyOpponents, formatOpponent } from '../hooks/useWeeklyOpponents'
 
 export interface PlayerPoolProps {
   players: Player[]
@@ -19,6 +21,8 @@ type SortKey = 'adp' | 'pprPoints'
 const POSITIONS: PositionFilter[] = ['ALL', 'QB', 'RB', 'WR', 'TE', 'K', 'DEF']
 
 export function PlayerPool({ players, onDraft, canDraft }: PlayerPoolProps) {
+  const { week } = usePlayers()
+  const { opponents } = useWeeklyOpponents(week)
   const [search, setSearch] = useState('')
   const [positionFilter, setPositionFilter] = useState<PositionFilter>('ALL')
   const [sortKey, setSortKey] = useState<SortKey>('adp')
@@ -77,11 +81,12 @@ export function PlayerPool({ players, onDraft, canDraft }: PlayerPoolProps) {
         {visiblePlayers.length === 0 ? (
           <p className="py-6 text-center text-sm text-slate-500">No players match.</p>
         ) : (
-          <table className="w-full min-w-[34rem] text-sm">
+          <table className="w-full min-w-[38rem] text-sm">
             <thead>
               <tr className="border-b border-slate-700 text-left text-xs text-slate-500">
                 <th className="py-2 font-medium">Player</th>
                 <th className="py-2 font-medium">Team</th>
+                <th className="py-2 font-medium">Opp</th>
                 <th className="py-2 font-medium">ADP</th>
                 <th className="py-2 font-medium">Bye</th>
                 <th className="py-2 font-medium">PPR pts</th>
@@ -106,6 +111,7 @@ export function PlayerPool({ players, onDraft, canDraft }: PlayerPoolProps) {
                       </div>
                     </td>
                     <td className="py-2 text-slate-400">{player.nflTeam}</td>
+                    <td className="py-2 text-slate-400">{formatOpponent(player.nflTeam, opponents)}</td>
                     <td className="py-2 text-slate-400">{player.adp}</td>
                     <td className="py-2 text-slate-400">{player.byeWeek}</td>
                     <td className="py-2 text-slate-400">{player.pprPoints.toFixed(0)}</td>
