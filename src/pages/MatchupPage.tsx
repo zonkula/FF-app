@@ -127,6 +127,8 @@ export function MatchupPage() {
   const p2Total = historyEntry ? historyEntry.player2Score : liveP2Total
   const showProjected = status === 'live' || status === 'draft-in-progress'
   const isLive = status === 'live'
+  const p1Projected = p1Lines.reduce((sum, l) => sum + (l.projected ?? 0), 0)
+  const p2Projected = p2Lines.reduce((sum, l) => sum + (l.projected ?? 0), 0)
 
   return (
     <div className="mx-auto max-w-5xl space-y-4 p-3 sm:p-4">
@@ -145,10 +147,16 @@ export function MatchupPage() {
             <span className="text-sm text-slate-400">Week {activeWeek} matchup</span>
           </div>
           {status !== 'no-data' && status !== 'draft-in-progress' && (
-            <div
-              className={`text-lg font-bold ${isLive ? 'animate-pulse text-emerald-500' : 'text-white'}`}
-            >
-              {p1Total.toFixed(1)} <span className="text-sm font-normal text-slate-500">vs</span> {p2Total.toFixed(1)}
+            <div className="text-right">
+              <div className={`text-lg font-bold ${isLive ? 'animate-pulse text-emerald-500' : 'text-white'}`}>
+                {p1Total.toFixed(1)} <span className="text-sm font-normal text-slate-500">vs</span>{' '}
+                {p2Total.toFixed(1)}
+              </div>
+              {isLive && (
+                <div className="text-xs text-slate-500">
+                  Projected: {p1Projected.toFixed(1)} vs {p2Projected.toFixed(1)}
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -185,6 +193,7 @@ export function MatchupPage() {
             label={PLAYER_DISPLAY_NAMES.player1}
             lines={p1Lines}
             total={p1Total}
+            projectedTotal={p1Projected}
             showProjected={showProjected}
             isLive={isLive}
           />
@@ -192,6 +201,7 @@ export function MatchupPage() {
             label={PLAYER_DISPLAY_NAMES.player2}
             lines={p2Lines}
             total={p2Total}
+            projectedTotal={p2Projected}
             showProjected={showProjected}
             isLive={isLive}
           />
@@ -255,12 +265,14 @@ function RosterLinesCard({
   label,
   lines,
   total,
+  projectedTotal,
   showProjected,
   isLive,
 }: {
   label: string
   lines: DisplayLine[]
   total: number
+  projectedTotal: number
   showProjected: boolean
   isLive: boolean
 }) {
@@ -268,9 +280,12 @@ function RosterLinesCard({
     <Card padding="p-4" hoverGlow={false}>
       <div className="mb-2 flex items-center justify-between">
         <h3 className="font-semibold text-white">{label}</h3>
-        <span className={`text-sm font-bold ${isLive ? 'animate-pulse text-emerald-500' : 'text-slate-300'}`}>
-          {total.toFixed(1)} pts
-        </span>
+        <div className="text-right">
+          <span className={`text-sm font-bold ${isLive ? 'animate-pulse text-emerald-500' : 'text-slate-300'}`}>
+            {total.toFixed(1)} pts
+          </span>
+          {showProjected && <div className="text-xs text-slate-500">Proj: {projectedTotal.toFixed(1)}</div>}
+        </div>
       </div>
       <div className="overflow-x-auto">
         <table className="w-full min-w-[20rem] text-sm">
