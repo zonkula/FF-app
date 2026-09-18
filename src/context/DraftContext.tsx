@@ -13,6 +13,7 @@ import {
 import { isDraftComplete as computeIsDraftComplete, resolveRoster, type LiveDraft, type PlayerSlot } from './draftLogic'
 import { organizeRosterByPosition } from './rosterRules'
 import { getNextWeeklyResetDate } from '../utils/season'
+import { finalizePastWeeks } from './weekFinalization'
 
 export type Turn = 1 | 2
 export { ROSTER_SIZE } from './rosterRules'
@@ -56,9 +57,11 @@ export interface DraftProviderProps {
   children: ReactNode
   /** The current season's player pool (from useSleeperPlayers). */
   players: Player[]
+  /** The current Sleeper season string (from useSleeperPlayers), for scoring past weeks. */
+  season: string | null
 }
 
-export function DraftProvider({ children, players }: DraftProviderProps) {
+export function DraftProvider({ children, players, season }: DraftProviderProps) {
   const playersById = useMemo(() => new Map(players.map((p) => [p.id, p])), [players])
 
   const [week, setWeek] = useState<number | null>(null)
@@ -85,6 +88,12 @@ export function DraftProvider({ children, players }: DraftProviderProps) {
         unsubscribe = subscribeToDraft(currentWeek, (remote) => {
           if (!cancelled) setDraft(remote)
         })
+        // Now that this week's draft is confirmed live, score and record any past week(s) that
+        // are over but not yet in the history - see finalizePastWeeks for why this is the point
+        // that locks in a winner, rather than the moment a roster fills up.
+        if (season != null) {
+          finalizePastWeeks(season, currentWeek).catch(() => {})
+        }
       } catch (err) {
         if (!cancelled) {
           setConnectionError(err instanceof Error ? err.message : 'Failed to connect to Firebase.')
@@ -97,7 +106,7 @@ export function DraftProvider({ children, players }: DraftProviderProps) {
       cancelled = true
       unsubscribe?.()
     }
-  }, [players])
+  }, [players, season])
 
   // While the tab stays open, check again right at the next Tuesday-midnight boundary; if the
   // active week actually moved, the effect above reconnects to the new one.

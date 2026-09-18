@@ -13,7 +13,7 @@ import { ErrorBoundary } from './ErrorBoundary'
  */
 export function RequireAuth({ children }: { children: ReactNode }) {
   const { user } = useAuth()
-  const { players, loading, error } = usePlayers()
+  const { players, season, loading, error } = usePlayers()
 
   if (!user) {
     return <Navigate to="/login" replace />
@@ -33,7 +33,9 @@ export function RequireAuth({ children }: { children: ReactNode }) {
 
   return (
     <ErrorBoundary>
-      <DraftProvider players={players}>{children}</DraftProvider>
+      <DraftProvider players={players} season={season}>
+        {children}
+      </DraftProvider>
     </ErrorBoundary>
   )
 }

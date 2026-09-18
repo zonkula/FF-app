@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useState } from 'react'
 import type { Player } from '../types/player'
 import { useDraft } from '../hooks/useDraft'
 import { useAuth } from '../hooks/useAuth'
@@ -6,7 +6,6 @@ import { useWeeklyScores } from '../hooks/useWeeklyScores'
 import { useSeasonRecord } from '../hooks/useSeasonRecord'
 import { usePlayers } from '../context/PlayersContext'
 import { canDraftPosition } from '../context/rosterRules'
-import { saveDraftHistory, type PlayerHistoryLine } from '../utils/firebase'
 import { PLAYER_DISPLAY_NAMES, turnForPlayerName } from '../utils/playerNames'
 import { TurnIndicator } from './TurnIndicator'
 import { RosterPreview } from './RosterPreview'
@@ -95,11 +94,7 @@ export function DraftBoard() {
       )}
 
       {isDraftComplete ? (
-        <DraftCompleteSummary
-          weekNumber={weekNumber}
-          playerOneRoster={playerOneRoster}
-          playerTwoRoster={playerTwoRoster}
-        />
+        <DraftCompleteSummary playerOneRoster={playerOneRoster} playerTwoRoster={playerTwoRoster} />
       ) : (
         <>
           <TurnIndicator currentTurn={currentTurn} />
@@ -137,45 +132,19 @@ export function DraftBoard() {
 }
 
 interface DraftCompleteSummaryProps {
-  weekNumber: number
   playerOneRoster: Player[]
   playerTwoRoster: Player[]
 }
 
-function toHistoryLines(roster: Player[], scores: Record<string, number>): PlayerHistoryLine[] {
-  return roster.map((player) => ({
-    playerId: player.id,
-    name: player.name,
-    position: player.position,
-    points: scores[player.id] ?? 0,
-    nflTeam: player.nflTeam,
-  }))
-}
-
-function DraftCompleteSummary({ weekNumber, playerOneRoster, playerTwoRoster }: DraftCompleteSummaryProps) {
+function DraftCompleteSummary({ playerOneRoster, playerTwoRoster }: DraftCompleteSummaryProps) {
   const { week } = usePlayers()
   // Both calls share one Sleeper request (see useWeeklyScores' dedup cache) since they're for
   // the same NFL week - only the roster used to sum totalPoints differs.
-  const { scores, totalPoints: p1Total, loading: scoresLoading } = useWeeklyScores(week, playerOneRoster)
+  // This is a live, in-progress view only - the final result isn't recorded as history (and
+  // doesn't count toward standings) until next week's draft starts. See finalizePastWeeks.
+  const { scores, totalPoints: p1Total } = useWeeklyScores(week, playerOneRoster)
   const { totalPoints: p2Total } = useWeeklyScores(week, playerTwoRoster)
   const gamesReported = Object.keys(scores).length > 0
-
-  const historySavedForWeek = useRef<number | null>(null)
-  useEffect(() => {
-    if (scoresLoading || historySavedForWeek.current === weekNumber) return
-    historySavedForWeek.current = weekNumber
-    saveDraftHistory(weekNumber, {
-      week: weekNumber,
-      player1Score: p1Total,
-      player2Score: p2Total,
-      winner: p1Total === p2Total ? 'tie' : p1Total > p2Total ? 'player1' : 'player2',
-      player1Roster: toHistoryLines(playerOneRoster, scores),
-      player2Roster: toHistoryLines(playerTwoRoster, scores),
-      completedAt: Date.now(),
-    }).catch(() => {})
-    // Intentionally only re-runs when the completed week changes, not on every score refetch.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [weekNumber, scoresLoading])
 
   return (
     <div className="space-y-4">
